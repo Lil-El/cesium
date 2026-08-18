@@ -22,19 +22,12 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
 
 viewer.scene.globe.enableLighting = true;
 
-// viewer.terrainProvider = new Cesium.CesiumTerrainProvider({
-//   url: Cesium.IonResource.fromAssetId(1),
-//   requestWaterMask: true,
-//   requestVertexNormals: true,
-// });
-
 // 添加 3D Tiles 数据
 // const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
 // const tileset = await Cesium.Cesium3DTileset.fromUrl('/tiles/tileset.json');
 // viewer.scene.primitives.add(tileset);
 
 // 加载自定义 glTF 建筑模型
-
 setTimeout(async () => {
   const h = await getTerrainHeightByLonLat(viewer, 108.87722, 34.19241);
 
@@ -44,6 +37,7 @@ setTimeout(async () => {
     scale: 1.0,
   });
   viewer.scene.primitives.add(model);
+  modelRef = model;
 
   model.readyEvent.addEventListener(() => {
     const boundingSphere = model.boundingSphere;
@@ -70,27 +64,104 @@ viewer.camera.flyTo({
 const osmBuildings = await Cesium.createOsmBuildingsAsync();
 viewer.scene.primitives.add(osmBuildings);
 
-// viewer.camera.flyTo({
-//   destination: Cesium.Cartesian3.fromDegrees(108.87722, 34.188, 1200),
-//   orientation: {
-//     heading: Cesium.Math.toRadians(0),
-//     pitch: Cesium.Math.toRadians(-60),
-//     roll: 0
-//   },
-//   duration: 2
-// });
+// ==================== 点击弹窗逻辑 ====================
+const popup = document.getElementById("infoPopup");
 
+let modelRef = null;
+
+function showPopup(screenX, screenY, content) {
+  popup.innerHTML = content;
+  popup.style.display = "block";
+  popup.style.left = screenX + 15 + "px";
+  popup.style.top = screenY - 15 + "px";
+}
+
+function hidePopup() {
+  popup.style.display = "none";
+}
+
+// 地图点击弹窗：显示经纬度、海拔等占位信息
+function showMapPopup(clickPosition, cartesian) {
+  const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+  const lon = Cesium.Math.toDegrees(cartographic.longitude);
+  const lat = Cesium.Math.toDegrees(cartographic.latitude);
+  const height = cartographic.height;
+
+  const content = `
+    <div class="popup-title">📍 地图位置</div>
+    <div class="popup-row">经度：<span>${lon.toFixed(6)}°</span></div>
+    <div class="popup-row">纬度：<span>${lat.toFixed(6)}°</span></div>
+    <div class="popup-row">海拔：<span>${height.toFixed(2)} m</span></div>
+    <div class="popup-row">地形：<span>世界地形</span></div>
+  `;
+  showPopup(clickPosition.x, clickPosition.y, content);
+}
+
+// 模型点击弹窗：展示建筑模型占位信息
+function showModelPopup(clickPosition) {
+  const content = `
+    <div class="popup-title">🏢 建筑模型</div>
+    <div class="popup-row">名称：<span>示例建筑</span></div>
+    <div class="popup-row">类型：<span>glTF 模型</span></div>
+    <div class="popup-row">高度：<span>-- m</span></div>
+    <div class="popup-row">面积：<span>-- m²</span></div>
+    <div class="popup-row">描述：<span>占位信息，待接入真实数据</span></div>
+  `;
+  showPopup(clickPosition.x, clickPosition.y, content);
+}
+
+// 注册全局点击事件
+const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+handler.setInputAction((click) => {
+  // 获取点击位置处的场景元素（Primitive或Entity）
+  const picked = viewer.scene.pick(click.position);
+  console.log(picked);
+
+  if (Cesium.defined(picked) && picked.primitive === modelRef) {
+    // 点击到了建筑模型
+    showModelPopup(click.position);
+  } else if (Cesium.defined(picked) && picked.primitive === osmBuildings) {
+    // 获取点击位置对应的三维世界坐标（Cartesian3）
+    // 点击到 OSM 建筑，也显示模型弹窗（占位）
+    const cartesian = viewer.scene.pickPosition(click.position);
+    if (Cesium.defined(cartesian)) {
+      const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+      const lon = Cesium.Math.toDegrees(cartographic.longitude).toFixed(6);
+      const lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(6);
+      const content = `
+        <div class="popup-title">🏗️ OSM 建筑</div>
+        <div class="popup-row">经度：<span>${lon}°</span></div>
+        <div class="popup-row">纬度：<span>${lat}°</span></div>
+        <div class="popup-row">数据源：<span>OpenStreetMap</span></div>
+        <div class="popup-row">描述：<span>占位信息，待接入真实数据</span></div>
+      `;
+      showPopup(click.position.x, click.position.y, content);
+    }
+  } else {
+    // 点击到了地形/地图
+    const cartesian = viewer.scene.pickPosition(click.position);
+    if (Cesium.defined(cartesian)) {
+      showMapPopup(click.position, cartesian);
+    } else {
+      hidePopup();
+    }
+  }
+}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+// 鼠标移动时隐藏弹窗（点击空白处也隐藏）
+handler.setInputAction(() => {
+  hidePopup();
+}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+// https://blog.csdn.net/gusushantang/article/details/158462588
 async function getTerrainHeightByLonLat(viewer, lon, lat) {
-  // 1. 转换为弧度（Cesium 内部计算用弧度）
   const cartographic = Cesium.Cartographic.fromDegrees(lon, lat);
 
-  // 2. 执行地形采样（使用最高精度）
-  const terrainProvider = viewer.terrainProvider; // 初始是 undefined, 后续会赋值
+  const terrainProvider = viewer.terrainProvider;
   const sampledPositions = await Cesium.sampleTerrainMostDetailed(
     terrainProvider,
-    [cartographic], // 传入数组，支持批量查询
+    [cartographic],
   );
 
-  // 3. 返回地形高度（米）
   return sampledPositions[0].height;
 }
