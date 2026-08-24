@@ -4,9 +4,11 @@ import { showMapPopup, showModelPopup, showOSMPopup, hidePopup } from "./popup.j
 import { createFloodPolygon, flyToPolygon } from "./flood.js";
 import { initOSMBuildings } from "./osm.js";
 import { initTileset } from "./tiles.js";
-import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove } from "./tree.js";
+import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import model from "./model.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
+
+// 边坡治理：绘制 polyline
 
 Cesium.Ion.defaultAccessToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3NGM4NmQ5ZS00NWJiLTQ3MmItOWY2NC1hYjI0YjExMjViMDQiLCJpZCI6MzE5OTMsInNjb3BlcyI6WyJhc3IiLCJnYyJdLCJpYXQiOjE1OTYyODcyNzd9.OA9tQ5_-jqejQUoBlBWkigjfK_irKu8GH_lP88hQYCs";
@@ -35,6 +37,12 @@ viewer.clock.currentTime = Cesium.JulianDate.fromDate(time);
 
 // 开启光照
 viewer.scene.globe.enableLighting = true;
+
+// 相机控制器
+const cameraController = viewer.scene.screenSpaceCameraController;
+cameraController.tiltEventTypes = [Cesium.CameraEventType.RIGHT_DRAG];
+cameraController.rotateEventTypes = [Cesium.CameraEventType.LEFT_DRAG];
+cameraController.zoomEventTypes = [Cesium.CameraEventType.WHEEL];
 
 // 添加 3D Tiles 数据（由 tiles.js 管理显隐）
 await initTileset(viewer);
@@ -66,12 +74,13 @@ handler.setInputAction((click) => {
 
   // 获取点击位置处的场景元素（Primitive或Entity）
   const picked = viewer.scene.pick(click.position);
+  console.log(picked);
 
   const cartesian = viewer.scene.pickPosition(click.position);
   const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
   const lon = Cesium.Math.toDegrees(cartographic.longitude);
   const lat = Cesium.Math.toDegrees(cartographic.latitude);
-  console.log(lon, lat);
+  console.log(picked, lon, lat);
 
   if (Cesium.defined(picked) && picked.primitive === model) {
     // 点击到了建筑模型
@@ -83,6 +92,9 @@ handler.setInputAction((click) => {
     if (Cesium.defined(cartesian)) {
       showOSMPopup(click.position, cartesian);
     }
+  } else if (picked?.id?.name === "Tree Polygon") {
+    // 点击到了树多边形
+    createTreeModel(viewer, cartesian);
   } else {
     // 点击到了地形/地图
     const cartesian = viewer.scene.pickPosition(click.position);

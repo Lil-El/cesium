@@ -1,4 +1,5 @@
 import * as Cesium from "cesium";
+import { getHeightByCartesian } from "./terrain.js";
 
 let treeEnabled = false;
 let isFirstClick = false;
@@ -84,6 +85,7 @@ export function initTreeMode(_viewer, handler) {
     }
 
     polygonEntity = viewer.entities.add({
+      name: "Tree Polygon",
       polygon: {
         hierarchy: new Cesium.PolygonHierarchy(drawPoints),
         material: Cesium.Color.GREEN.withAlpha(0.4),
@@ -94,13 +96,16 @@ export function initTreeMode(_viewer, handler) {
       },
     });
 
+   // 计算多边形面积（取绝对值，因为顶点顺序会影响符号）
+    const area = Math.abs(Cesium.PolygonPipeline.computeArea2D(drawPoints));
+
     clearDrawState();
 
     treeEnabled = false;
     treeToggle.checked = false;
     treeControls.style.display = "none";
     viewer.scene.canvas.style.cursor = "default";
-  }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+  }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
 }
 
 export function handleTreeLeftClick(click) {
@@ -193,4 +198,38 @@ function updatePreviewPoint(lon, lat, h) {
       },
     });
   }
+}
+
+/**
+ *
+ * @param {Cesium.Viewer} viewer
+ * @param {Cesium.Cartesian3} cartesian
+ * @returns
+ */
+export async function createTreeModel(viewer, cartesian) {
+  const model = await Cesium.Model.fromGltfAsync({
+    url: "/models/tree.glb",
+    modelMatrix: null,
+    scale: 1.0,
+    maximumPixelSize: 50,
+  });
+
+  const h = await getHeightByCartesian(viewer, cartesian);
+
+  viewer.scene.primitives.add(model);
+
+  model.readyEvent.addEventListener(() => {
+    const boundingSphere = model.boundingSphere;
+    const height = boundingSphere.radius / 2 + h + 0.07;
+
+    const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+    const lon = Cesium.Math.toDegrees(cartographic.longitude);
+    const lat = Cesium.Math.toDegrees(cartographic.latitude);
+
+    const position = Cesium.Cartesian3.fromDegrees(lon, lat, height);
+
+    model.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(position);
+  });
+
+  return model;
 }
