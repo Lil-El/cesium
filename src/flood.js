@@ -42,16 +42,23 @@ export function createFloodPolygon(viewer, positions) {
   floodEntity = viewer.entities.add({
     show: floodVisible,
     polygon: {
-      hierarchy: new Cesium.PolygonHierarchy(positions.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat))),
-      extrudedHeight: 0,
-      height: new Cesium.CallbackProperty(() => {
+      hierarchy: new Cesium.PolygonHierarchy(
+        positions.map(([lon, lat]) => Cesium.Cartesian3.fromDegrees(lon, lat))
+      ),
+      height: 0,
+      extrudedHeight: new Cesium.CallbackProperty(() => {
         if (myNumericVariable <= 0) {
           return 0;
         }
         return myNumericVariable;
       }, false),
       perPositionHeight: false,
-      material: Cesium.Color.fromBytes(64, 157, 253, 200),
+      material: new Cesium.ImageMaterialProperty({
+        image: Cesium.buildModuleUrl("Assets/Textures/waterNormals.jpg"),
+        repeat: new Cesium.Cartesian2(10, 10),
+        color: Cesium.Color.fromBytes(110, 195, 255, 195),
+        transparent: true,
+      }),
     },
   });
 

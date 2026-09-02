@@ -5,10 +5,11 @@ import { createFloodPolygon, flyToPolygon } from "./flood.js";
 import { initOSMBuildings } from "./osm.js";
 import { initTileset } from "./tiles.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
+import { initSplit } from "./split.js";
 import model from "./model.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-// 边坡治理：绘制 polyline
+// 边坡治理：绘制 polyline；电子围栏与路线设定预警；卷帘对比
 
 Cesium.Ion.defaultAccessToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3NGM4NmQ5ZS00NWJiLTQ3MmItOWY2NC1hYjI0YjExMjViMDQiLCJpZCI6MzE5OTMsInNjb3BlcyI6WyJhc3IiLCJnYyJdLCJpYXQiOjE1OTYyODcyNzd9.OA9tQ5_-jqejQUoBlBWkigjfK_irKu8GH_lP88hQYCs";
@@ -74,7 +75,6 @@ handler.setInputAction((click) => {
 
   // 获取点击位置处的场景元素（Primitive或Entity）
   const picked = viewer.scene.pick(click.position);
-  console.log(picked);
 
   const cartesian = viewer.scene.pickPosition(click.position);
   const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
@@ -82,18 +82,14 @@ handler.setInputAction((click) => {
   const lat = Cesium.Math.toDegrees(cartographic.latitude);
   console.log(picked, lon, lat);
 
-  if (Cesium.defined(picked) && picked.primitive === model) {
-    // 点击到了建筑模型
-    showModelPopup(click.position);
-  } else if (Cesium.defined(picked) && picked.primitive === osmBuildings) {
-    // 获取点击位置对应的三维世界坐标（Cartesian3）
-    // 点击到 OSM 建筑，也显示模型弹窗（占位）
-    const cartesian = viewer.scene.pickPosition(click.position);
-    if (Cesium.defined(cartesian)) {
-      showOSMPopup(click.position, cartesian);
-    }
+  if (Cesium.defined(picked) && picked.primitive === osmBuildings) {
+    // 点击到 OSM 建筑
+    showOSMPopup(click.position, cartesian);
+  } else if (Cesium.defined(picked) && picked.primitive instanceof Cesium.Model) {
+    // 点击到了模型
+    showModelPopup(click.position, picked.primitive.featureIdLabel);
   } else if (picked?.id?.name === "Tree Polygon") {
-    // 点击到了树多边形
+    // 点击到了生态修复区域
     createTreeModel(viewer, cartesian);
   } else {
     // 点击到了地形/地图
@@ -114,6 +110,9 @@ handler.setInputAction((movement) => {
 
 // 初始化树绘制模式
 initTreeMode(viewer, handler);
+
+// 初始化卷帘对比
+initSplit(viewer);
 
 // 创建洪水多边形
 createFloodPolygon(viewer, [

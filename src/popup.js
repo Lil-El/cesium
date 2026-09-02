@@ -31,11 +31,11 @@ function showMapPopup(clickPosition, cartesian) {
   showPopup(clickPosition.x, clickPosition.y, content);
 }
 
-// 模型点击弹窗：展示建筑模型占位信息
-function showModelPopup(clickPosition) {
+// 模型点击弹窗：展示模型占位信息
+function showModelPopup(clickPosition, label) {
   const content = `
-    <div class="popup-title">🏢 建筑模型</div>
-    <div class="popup-row">名称：<span>示例建筑</span></div>
+    <div class="popup-title">🏢 模型</div>
+    <div class="popup-row">名称：<span>${label}</span></div>
     <div class="popup-row">类型：<span>glTF 模型</span></div>
     <div class="popup-row">高度：<span>-- m</span></div>
     <div class="popup-row">面积：<span>-- m²</span></div>

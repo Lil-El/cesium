@@ -207,11 +207,13 @@ function updatePreviewPoint(lon, lat, h) {
  * @returns
  */
 export async function createTreeModel(viewer, cartesian) {
+  const scale = 8.0;
+
   const model = await Cesium.Model.fromGltfAsync({
     url: "/models/tree.glb",
     modelMatrix: null,
-    scale: 1.0,
-    maximumPixelSize: 50,
+    scale,
+    featureIdLabel: "🌳 一棵树",
   });
 
   const h = await getHeightByCartesian(viewer, cartesian);
@@ -220,7 +222,7 @@ export async function createTreeModel(viewer, cartesian) {
 
   model.readyEvent.addEventListener(() => {
     const boundingSphere = model.boundingSphere;
-    const height = boundingSphere.radius / 2 + h + 0.07;
+    const height = boundingSphere.radius / 2 + h + 0.07 * scale;
 
     const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
     const lon = Cesium.Math.toDegrees(cartographic.longitude);

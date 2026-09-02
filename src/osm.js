@@ -2,7 +2,7 @@ import * as Cesium from "cesium";
 
 const osmToggle = document.getElementById("osmToggle");
 
-let osmVisible = true;
+let osmVisible = false;
 let osmBuildings = null;
 
 osmToggle.addEventListener("change", (e) => {
