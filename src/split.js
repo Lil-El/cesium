@@ -1,10 +1,8 @@
 import * as Cesium from "cesium";
+import { setSplitMode } from "./layer.js";
 
 // ==================== 卷帘对比 ====================
 const splitToggle = document.getElementById("splitToggle");
-
-let leftLayer = null;
-let rightLayer = null;
 
 /** @type {Cesium.Viewer | null} */
 let _viewer = null;
@@ -138,40 +136,11 @@ splitToggle.addEventListener("change", (e) => {
   }
 });
 
-// ==================== 启用/禁用 ====================
-async function enableSplit() {
-  if (!_viewer || leftLayer || rightLayer) return;
-
+function enableSplit() {
   injectAxisStyles();
   createSplitAxis();
-
-  const provider = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
-    "https://portal.beidouhj.com/server/rest/services/Geological_Hazards/MapServer",
-    {
-      layers: "1",
-      enablePickFeatures: true,
-    },
-  );
-  rightLayer = new Cesium.ImageryLayer(provider, {
-    splitDirection: Cesium.SplitDirection.RIGHT,
-  });
-  _viewer.imageryLayers.add(rightLayer);
-
-  const provider1 = await Cesium.ArcGisMapServerImageryProvider.fromUrl(
-    "https://portal.beidouhj.com/server/rest/services/Geological_Hazards/MapServer",
-    {
-      layers: "0",
-      enablePickFeatures: true,
-    },
-  );
-  leftLayer = new Cesium.ImageryLayer(provider1, {
-    splitDirection: Cesium.SplitDirection.LEFT,
-  });
-  _viewer.imageryLayers.add(leftLayer);
-
-  const position = 0.5;
-  _viewer.scene.splitPosition = position;
-  updateAxisPosition(position);
+  setSplitMode(true);
+  updateAxisPosition(0.5);
 
   _viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(109.79192254519624, 38.53135670450269, 80000),
@@ -180,20 +149,7 @@ async function enableSplit() {
 }
 
 function disableSplit() {
-  if (!_viewer) return;
-
-  if (rightLayer) {
-    _viewer.imageryLayers.remove(rightLayer, true);
-    rightLayer = null;
-  }
-
-  if (leftLayer) {
-    _viewer.imageryLayers.remove(leftLayer, true);
-    leftLayer = null;
-  }
-
-  _viewer.scene.splitPosition = 0;
-
+  setSplitMode(false);
   removeSplitAxis();
 }
 

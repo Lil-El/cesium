@@ -1,4 +1,6 @@
-export function addHighlightFromGeometry(data) {
+import * as Cesium from "cesium";
+
+export function addHighlightFromGeometry(viewer, data) {
   const { geometry, geometryType } = data;
   if (!geometry) return;
 
@@ -41,7 +43,7 @@ export function addHighlightFromGeometry(data) {
       for (const path of geometry.paths) {
         instances.push(
           new Cesium.GeometryInstance({
-            geometry: new Cesium.PolylineGeometry({
+            geometry: new Cesium.GroundPolylineGeometry({
               positions: path.map(([x, y]) => Cesium.Cartesian3.fromDegrees(x, y)),
               width: 4,
             }),
@@ -52,7 +54,7 @@ export function addHighlightFromGeometry(data) {
         );
       }
       highlightEntity = viewer.scene.primitives.add(
-        new Cesium.Primitive({
+        new Cesium.GroundPolylinePrimitive({
           geometryInstances: instances,
           appearance: new Cesium.PolylineColorAppearance({
             translucent: true,

@@ -6,6 +6,7 @@ import { initOSMBuildings } from "./osm.js";
 import { initTileset } from "./tiles.js";
 import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
+import { initLayers } from "./layer.js";
 import { initSplit } from "./split.js";
 import model from "./model.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
@@ -99,7 +100,7 @@ handler.setInputAction((click) => {
 
       if (feat) {
         console.log(feat);
-        highlightEntity = addHighlightFromGeometry(feat.data);
+        highlightEntity = addHighlightFromGeometry(viewer, feat.data);
 
         const attr = feat.data.attributes;
         const labels = Object.entries(attr).map(([key, value]) => `${key}：${value}`);
@@ -151,6 +152,9 @@ handler.setInputAction((movement) => {
 
 // 初始化树绘制模式
 initTreeMode(viewer, handler);
+
+// 初始化图层（默认同时展示）
+await initLayers(viewer);
 
 // 初始化卷帘对比
 initSplit(viewer);
