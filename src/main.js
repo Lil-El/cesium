@@ -1,9 +1,10 @@
 import * as Cesium from "cesium";
 import { getTerrainHeightByLonLat } from "./terrain.js";
-import { showMapPopup, showModelPopup, showOSMPopup, hidePopup } from "./popup.js";
+import { showMapPopup, showModelPopup, showOSMPopup, hidePopup, showLayerPopup } from "./popup.js";
 import { createFloodPolygon, flyToPolygon } from "./flood.js";
 import { initOSMBuildings } from "./osm.js";
 import { initTileset } from "./tiles.js";
+import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import { initSplit } from "./split.js";
 import model from "./model.js";
@@ -68,6 +69,19 @@ viewer.scene.terrainProviderChanged.addEventListener(async (newProvider) => {
 // 添加 OSM 建筑（由 osm.js 管理显隐）
 const osmBuildings = await initOSMBuildings(viewer);
 
+// ==================== 矢量高亮 ====================
+let highlightEntity = null;
+
+function clearHighlight() {
+  if (!highlightEntity) return;
+  if (highlightEntity instanceof Cesium.Entity) {
+    viewer.entities.remove(highlightEntity);
+  } else {
+    viewer.scene.primitives.remove(highlightEntity);
+  }
+  highlightEntity = null;
+}
+
 // 注册全局点击事件
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click) => {
@@ -76,28 +90,54 @@ handler.setInputAction((click) => {
   // 获取点击位置处的场景元素（Primitive或Entity）
   const picked = viewer.scene.pick(click.position);
 
-  const cartesian = viewer.scene.pickPosition(click.position);
-  const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-  const lon = Cesium.Math.toDegrees(cartographic.longitude);
-  const lat = Cesium.Math.toDegrees(cartographic.latitude);
-  console.log(picked, lon, lat);
+  const pickRay = viewer.camera.getPickRay(click.position);
+  const promise = viewer.imageryLayers.pickImageryLayerFeatures(pickRay, viewer.scene);
+  if (Cesium.defined(promise)) {
+    promise.then((features) => {
+      const feat = features?.[0];
+      clearHighlight();
 
-  if (Cesium.defined(picked) && picked.primitive === osmBuildings) {
-    // 点击到 OSM 建筑
-    showOSMPopup(click.position, cartesian);
-  } else if (Cesium.defined(picked) && picked.primitive instanceof Cesium.Model) {
-    // 点击到了模型
-    showModelPopup(click.position, picked.primitive.featureIdLabel);
-  } else if (picked?.id?.name === "Tree Polygon") {
-    // 点击到了生态修复区域
-    createTreeModel(viewer, cartesian);
-  } else {
-    // 点击到了地形/地图
+      if (feat) {
+        console.log(feat);
+        highlightEntity = addHighlightFromGeometry(feat.data);
+
+        const attr = feat.data.attributes;
+        const labels = Object.entries(attr).map(([key, value]) => `${key}：${value}`);
+        showLayerPopup(click.position, feat.data.layerName, labels);
+        return;
+      } else {
+        fallbackPick(click, picked);
+      }
+    });
+    return;
+  }
+
+  clearHighlight();
+
+  function fallbackPick(click, picked) {
     const cartesian = viewer.scene.pickPosition(click.position);
-    if (Cesium.defined(cartesian)) {
-      showMapPopup(click.position, cartesian);
+    const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+    const lon = Cesium.Math.toDegrees(cartographic.longitude);
+    const lat = Cesium.Math.toDegrees(cartographic.latitude);
+    console.log(picked, lon, lat);
+
+    if (Cesium.defined(picked) && picked.primitive === osmBuildings) {
+      // 点击到 OSM 建筑
+      showOSMPopup(click.position, cartesian);
+    } else if (Cesium.defined(picked) && picked.primitive instanceof Cesium.Model) {
+      // 点击到了模型
+      showModelPopup(click.position, picked.primitive.featureIdLabel);
+    } else if (picked?.id?.name === "Tree Polygon") {
+      // 点击到了生态修复区域
+      createTreeModel(viewer, cartesian);
     } else {
-      hidePopup();
+      // 点击到了地形/地图
+      const cartesian = viewer.scene.pickPosition(click.position);
+      if (Cesium.defined(cartesian)) {
+        showMapPopup(click.position, cartesian);
+      } else {
+        hidePopup();
+      }
     }
   }
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -105,6 +145,7 @@ handler.setInputAction((click) => {
 // 鼠标移动时隐藏弹窗（点击空白处也隐藏）
 handler.setInputAction((movement) => {
   if (handleTreeMouseMove(movement)) return;
+  clearHighlight();
   hidePopup();
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 

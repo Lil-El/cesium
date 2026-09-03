@@ -58,4 +58,13 @@ function showOSMPopup(clickPosition, cartesian) {
   showPopup(clickPosition.x, clickPosition.y, content);
 }
 
-export { showPopup, hidePopup, showMapPopup, showModelPopup, showOSMPopup };
+function showLayerPopup(clickPosition, layerName, labels) {
+  const rows = labels.map((label) => `<div class="popup-row">${label}</div>`).join("");
+  const content = `
+    <div class="popup-title">🗺 ${layerName + " - 图层"}</div>
+    ${rows}
+  `;
+  showPopup(clickPosition.x, clickPosition.y, content);
+}
+
+export { showPopup, hidePopup, showMapPopup, showModelPopup, showOSMPopup, showLayerPopup };
