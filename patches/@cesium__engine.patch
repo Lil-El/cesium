@@ -1,0 +1,13 @@
+diff --git a/Source/Core/Resource.js b/Source/Core/Resource.js
+index 7f388164cafc2602c10879b8e13f2ec0edc3db08..266951d9be03c7638b24e5e2ff88c4c1396889cc 100644
+--- a/Source/Core/Resource.js
++++ b/Source/Core/Resource.js
+@@ -549,7 +549,7 @@ Resource.prototype.getUrlComponent = function (query, proxy) {
+   }
+ 
+   // Restore the placeholders, which may have been escaped in objectToQuery or elsewhere
+-  url = url.replace(/%7B/g, "{").replace(/%7D/g, "}");
++  if (!url.includes("portal.beidouhj.com")) url = url.replace(/%7B/g, "{").replace(/%7D/g, "}");
+ 
+   const templateValues = this._templateValues;
+   if (Object.keys(templateValues).length > 0) {

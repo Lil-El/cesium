@@ -138,12 +138,26 @@
     <div id="cesiumContainer"></div>
     <div id="infoPopup"></div>
     <div id="customSliderPanel">
+      <div style="font-size: 13px; color: #888; margin-bottom: 6px; font-weight: bold">影像图层</div>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="layer0Toggle" />
+        <span>地裂缝</span>
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="layer1Toggle" />
+        <span>地面塌陷区</span>
+      </label>
+
+      <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
+
+      <div style="font-size: 13px; color: #888; margin-bottom: 6px; font-weight: bold">3D 图层</div>
+
       <label class="checkbox-label">
         <input type="checkbox" id="tilesetToggle" checked />
         <span>3D Tiles</span>
       </label>
-
-      <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
 
       <label class="checkbox-label">
         <input type="checkbox" id="osmToggle" />
@@ -171,6 +185,16 @@
         <input type="checkbox" id="splitToggle" />
         <span>卷帘对比</span>
       </label>
+      <div id="splitSubItems" style="display: none; margin-left: 16px">
+        <label class="checkbox-label">
+          <input type="checkbox" id="splitImageryToggle" />
+          <span>对比影像图层</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="split3DToggle" />
+          <span>对比三维图层</span>
+        </label>
+      </div>
 
 
       <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />

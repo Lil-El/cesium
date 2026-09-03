@@ -1,0 +1,2 @@
+patchedDependencies:
+  '@cesium/engine': patches/@cesium__engine.patch

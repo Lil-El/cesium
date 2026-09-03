@@ -6,12 +6,10 @@ import { initOSMBuildings } from "./osm.js";
 import { initTileset } from "./tiles.js";
 import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
-import { initLayers } from "./layer.js";
+import { initLayers, setLayerVisible, flyToLayer } from "./layer.js";
 import { initSplit } from "./split.js";
 import model from "./model.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
-
-// 边坡治理：绘制 polyline；电子围栏与路线设定预警；卷帘对比
 
 Cesium.Ion.defaultAccessToken =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3NGM4NmQ5ZS00NWJiLTQ3MmItOWY2NC1hYjI0YjExMjViMDQiLCJpZCI6MzE5OTMsInNjb3BlcyI6WyJhc3IiLCJnYyJdLCJpYXQiOjE1OTYyODcyNzd9.OA9tQ5_-jqejQUoBlBWkigjfK_irKu8GH_lP88hQYCs";
@@ -155,6 +153,19 @@ initTreeMode(viewer, handler);
 
 // 初始化图层（默认同时展示）
 await initLayers(viewer);
+
+document.getElementById("layer0Toggle").addEventListener("change", (e) => {
+  setLayerVisible(0, e.target.checked);
+  if (e.target.checked) {
+    flyToLayer(0);
+  }
+});
+document.getElementById("layer1Toggle").addEventListener("change", (e) => {
+  setLayerVisible(1, e.target.checked);
+  if (e.target.checked) {
+    flyToLayer(1);
+  }
+});
 
 // 初始化卷帘对比
 initSplit(viewer);

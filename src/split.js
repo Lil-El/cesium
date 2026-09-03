@@ -3,6 +3,9 @@ import { setSplitMode } from "./layer.js";
 
 // ==================== 卷帘对比 ====================
 const splitToggle = document.getElementById("splitToggle");
+const splitSubItems = document.getElementById("splitSubItems");
+const splitImageryToggle = document.getElementById("splitImageryToggle");
+const split3DToggle = document.getElementById("split3DToggle");
 
 /** @type {Cesium.Viewer | null} */
 let _viewer = null;
@@ -130,17 +133,49 @@ function injectAxisStyles() {
 // ==================== 事件绑定 ====================
 splitToggle.addEventListener("change", (e) => {
   if (e.target.checked) {
-    enableSplit();
+    splitSubItems.style.display = "block";
+  } else {
+    splitSubItems.style.display = "none";
+    splitImageryToggle.checked = false;
+    split3DToggle.checked = false;
+    disableSplit();
+  }
+});
+
+splitImageryToggle.addEventListener("change", (e) => {
+  if (e.target.checked) {
+    enableImagerySplit();
   } else {
     disableSplit();
   }
 });
 
-function enableSplit() {
+split3DToggle.addEventListener("change", (e) => {
+  if (e.target.checked) {
+    enable3DSplit();
+  } else {
+    disableSplit();
+  }
+});
+
+function enableImagerySplit() {
   injectAxisStyles();
   createSplitAxis();
   setSplitMode(true);
   updateAxisPosition(0.5);
+
+  _viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(109.79192254519624, 38.53135670450269, 80000),
+    duration: 1.5,
+  });
+}
+
+function enable3DSplit() {
+  injectAxisStyles();
+  createSplitAxis();
+  setSplitMode(false);
+  updateAxisPosition(0.5);
+  _viewer.scene.splitPosition = 0.5;
 
   _viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(109.79192254519624, 38.53135670450269, 80000),
