@@ -1,11 +1,11 @@
 import * as Cesium from "cesium";
-import { setSplitMode } from "./layer.js";
+import { setSplitMode, flyToLayer } from "./layer.js";
+import { getTileset, set3DSplitMode } from "./tiles.js";
 
 // ==================== 卷帘对比 ====================
 const splitToggle = document.getElementById("splitToggle");
 const splitSubItems = document.getElementById("splitSubItems");
-const splitImageryToggle = document.getElementById("splitImageryToggle");
-const split3DToggle = document.getElementById("split3DToggle");
+const splitModeSelect = document.getElementById("splitModeSelect");
 
 /** @type {Cesium.Viewer | null} */
 let _viewer = null;
@@ -136,22 +136,16 @@ splitToggle.addEventListener("change", (e) => {
     splitSubItems.style.display = "block";
   } else {
     splitSubItems.style.display = "none";
-    splitImageryToggle.checked = false;
-    split3DToggle.checked = false;
+    splitModeSelect.value = "";
     disableSplit();
   }
 });
 
-splitImageryToggle.addEventListener("change", (e) => {
-  if (e.target.checked) {
+splitModeSelect.addEventListener("change", (e) => {
+  const mode = e.target.value;
+  if (mode === "imagery") {
     enableImagerySplit();
-  } else {
-    disableSplit();
-  }
-});
-
-split3DToggle.addEventListener("change", (e) => {
-  if (e.target.checked) {
+  } else if (mode === "3d") {
     enable3DSplit();
   } else {
     disableSplit();
@@ -164,10 +158,7 @@ function enableImagerySplit() {
   setSplitMode(true);
   updateAxisPosition(0.5);
 
-  _viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(109.79192254519624, 38.53135670450269, 80000),
-    duration: 1.5,
-  });
+  flyToLayer(0);
 }
 
 function enable3DSplit() {
@@ -177,14 +168,19 @@ function enable3DSplit() {
   updateAxisPosition(0.5);
   _viewer.scene.splitPosition = 0.5;
 
-  _viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(109.79192254519624, 38.53135670450269, 80000),
-    duration: 1.5,
-  });
+  set3DSplitMode(true);
+
+  const tileset = getTileset();
+  if (tileset) {
+    _viewer.camera.flyToBoundingSphere(tileset.boundingSphere, {
+      duration: 1.5,
+    });
+  }
 }
 
 function disableSplit() {
   setSplitMode(false);
+  set3DSplitMode(false);
   removeSplitAxis();
 }
 

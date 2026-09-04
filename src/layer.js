@@ -14,6 +14,9 @@ let _viewer = null;
 /** @type {string | null} */
 let currentKsbm = null;
 
+/** @type {boolean} */
+let _splitEnabled = false;
+
 /** @type {Map<string, Cesium.Rectangle>} */
 const extentCache = new Map();
 
@@ -137,6 +140,11 @@ export async function setLayerKsbm(ksbm) {
 
   layer0.show = wasVisible0;
   layer1.show = wasVisible1;
+
+  if (_splitEnabled) {
+    layer0.splitDirection = Cesium.SplitDirection.LEFT;
+    layer1.splitDirection = Cesium.SplitDirection.RIGHT;
+  }
 }
 
 export function getCurrentKsbm() {
@@ -145,6 +153,8 @@ export function getCurrentKsbm() {
 
 export function setSplitMode(enabled) {
   if (!_viewer || !layer0 || !layer1) return;
+
+  _splitEnabled = enabled;
 
   if (enabled) {
     layer0.splitDirection = Cesium.SplitDirection.LEFT;

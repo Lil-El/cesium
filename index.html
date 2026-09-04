@@ -155,8 +155,8 @@
             cursor: pointer;
           "
         >
-          <option value="">全部</option>
-          <option value="C6100002015061110138703">金鸡滩</option>
+          <option value="">全部矿区</option>
+          <option value="C6100002015061110138703">金鸡滩煤矿</option>
         </select>
       </div>
 
@@ -187,6 +187,33 @@
       <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
 
       <label class="checkbox-label">
+        <input type="checkbox" id="splitToggle" />
+        <span>卷帘对比</span>
+      </label>
+      <div id="splitSubItems" style="display: none; margin-left: 16px">
+        <select
+          id="splitModeSelect"
+          style="
+            width: 100%;
+            padding: 4px 6px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+          "
+        >
+          <option value="">请选择对比图层</option>
+          <option value="imagery">影像图层</option>
+          <option value="3d">三维图层</option>
+        </select>
+      </div>
+
+      <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
+
+      <label class="checkbox-label">
         <input type="checkbox" id="floodToggle" />
         <span>淹没分析</span>
       </label>
@@ -197,23 +224,6 @@
           <input type="range" id="mySlider" min="0" max="50" step="0.5" value="0" />
           <span class="slider-value" id="sliderValue">0</span>
         </div>
-      </div>
-
-      <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
-
-      <label class="checkbox-label">
-        <input type="checkbox" id="splitToggle" />
-        <span>卷帘对比</span>
-      </label>
-      <div id="splitSubItems" style="display: none; margin-left: 16px">
-        <label class="checkbox-label">
-          <input type="checkbox" id="splitImageryToggle" />
-          <span>对比影像图层</span>
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" id="split3DToggle" />
-          <span>对比三维图层</span>
-        </label>
       </div>
 
 
