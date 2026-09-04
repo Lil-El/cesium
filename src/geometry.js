@@ -1,5 +1,22 @@
 import * as Cesium from "cesium";
 
+/**
+ * 扩展 Rectangle 四周按比例留出余量
+ * @param {Cesium.Rectangle} rectangle - 原始矩形
+ * @param {number} margin - 四边各扩展的比例，默认 0.1（10%）
+ * @returns {Cesium.Rectangle}
+ */
+export function expandRectangle(rectangle, margin = 0.1) {
+  const w = rectangle.width;
+  const h = rectangle.height;
+  return new Cesium.Rectangle(
+    rectangle.west - w * margin,
+    rectangle.south - h * margin,
+    rectangle.east + w * margin,
+    rectangle.north + h * margin,
+  );
+}
+
 export function addHighlightFromGeometry(viewer, data) {
   const { geometry, geometryType } = data;
   if (!geometry) return;

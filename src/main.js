@@ -6,7 +6,7 @@ import { initOSMBuildings } from "./osm.js";
 import { initTileset } from "./tiles.js";
 import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
-import { initLayers, setLayerVisible, flyToLayer } from "./layer.js";
+import { initLayers, setLayerVisible, flyToLayer, setLayerKsbm, getCurrentKsbm } from "./layer.js";
 import { initSplit } from "./split.js";
 import model from "./model.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
@@ -154,16 +154,27 @@ initTreeMode(viewer, handler);
 // 初始化图层（默认同时展示）
 await initLayers(viewer);
 
-document.getElementById("layer0Toggle").addEventListener("change", (e) => {
+document.getElementById("layer0Toggle").addEventListener("change", async (e) => {
   setLayerVisible(0, e.target.checked);
   if (e.target.checked) {
-    flyToLayer(0);
+    await flyToLayer(0);
   }
 });
-document.getElementById("layer1Toggle").addEventListener("change", (e) => {
+document.getElementById("layer1Toggle").addEventListener("change", async (e) => {
   setLayerVisible(1, e.target.checked);
   if (e.target.checked) {
-    flyToLayer(1);
+    await flyToLayer(1);
+  }
+});
+
+document.getElementById("mineSelect").addEventListener("change", async (e) => {
+  const ksbm = e.target.value || null;
+  await setLayerKsbm(ksbm);
+
+  if (document.getElementById("layer0Toggle").checked) {
+    await flyToLayer(0);
+  } else if (document.getElementById("layer1Toggle").checked) {
+    await flyToLayer(1);
   }
 });
 
