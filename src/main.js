@@ -7,7 +7,7 @@ import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import { initLayers, setLayerVisible, flyToLayer, setLayerKsbm, getCurrentKsbm } from "./layer.js";
 import { initSplit } from "./split.js";
-import { initMeasure } from "./measure.js";
+import { initEntityDraw } from "./entity-draw.js";
 import { DrawTool } from "./draw.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -167,8 +167,8 @@ handler.setInputAction((movement) => {
   hidePopup();
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-// 初始化测量工具
-initMeasure(viewer);
+// 初始化实体绘制
+initEntityDraw(viewer);
 
 // 初始化树绘制模式
 initTreeMode(viewer, handler);

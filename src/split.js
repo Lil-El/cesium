@@ -3,9 +3,7 @@ import { setSplitMode, flyToLayer } from "./layer.js";
 import { getTileset, set3DSplitMode } from "./tiles.js";
 
 // ==================== 卷帘对比 ====================
-const splitToggle = document.getElementById("splitToggle");
-const splitSubItems = document.getElementById("splitSubItems");
-const splitModeSelect = document.getElementById("splitModeSelect");
+const splitModeCheckboxes = document.querySelectorAll('input[name="splitMode"]');
 
 /** @type {Cesium.Viewer | null} */
 let _viewer = null;
@@ -131,25 +129,23 @@ function injectAxisStyles() {
 }
 
 // ==================== 事件绑定 ====================
-splitToggle.addEventListener("change", (e) => {
-  if (e.target.checked) {
-    splitSubItems.style.display = "block";
-  } else {
-    splitSubItems.style.display = "none";
-    splitModeSelect.value = "";
-    disableSplit();
-  }
-});
+splitModeCheckboxes.forEach((checkbox) => {
+  checkbox.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      splitModeCheckboxes.forEach((cb) => {
+        if (cb !== e.target) cb.checked = false;
+      });
 
-splitModeSelect.addEventListener("change", (e) => {
-  const mode = e.target.value;
-  if (mode === "imagery") {
-    enableImagerySplit();
-  } else if (mode === "3d") {
-    enable3DSplit();
-  } else {
-    disableSplit();
-  }
+      const mode = e.target.value;
+      if (mode === "imagery") {
+        enableImagerySplit();
+      } else if (mode === "3d") {
+        enable3DSplit();
+      }
+    } else {
+      disableSplit();
+    }
+  });
 });
 
 function enableImagerySplit() {
