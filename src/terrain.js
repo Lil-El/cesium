@@ -1,6 +1,14 @@
 import * as Cesium from "cesium";
 
-// https://blog.csdn.net/gusushantang/article/details/158462588
+/**
+ * 需要在 terrainProvider 加载地形后调用，否则会报错
+ * https://blog.csdn.net/gusushantang/article/details/158462588
+ *
+ * @param {*} viewer
+ * @param {*} lon
+ * @param {*} lat
+ * @returns
+ */
 export async function getTerrainHeightByLonLat(viewer, lon, lat) {
   const cartographic = Cesium.Cartographic.fromDegrees(lon, lat);
 

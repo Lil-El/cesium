@@ -175,7 +175,7 @@
       <div style="font-size: 13px; color: #888; margin-bottom: 6px; font-weight: bold">3D 图层</div>
 
       <label class="checkbox-label">
-        <input type="checkbox" id="tilesetToggle" checked />
+        <input type="checkbox" id="tilesetToggle" />
         <span>3D Tiles</span>
       </label>
 
@@ -226,6 +226,49 @@
         </div>
       </div>
 
+
+      <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="measureToggle" />
+        <span>图形绘制</span>
+      </label>
+      <div id="measureControls" style="display: none">
+        <div style="margin-bottom: 6px">
+          <select
+            id="measureModeSelect"
+            style="
+              width: 100%;
+              padding: 4px 6px;
+              background: rgba(255, 255, 255, 0.08);
+              color: #ccc;
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              border-radius: 4px;
+              font-size: 12px;
+              outline: none;
+              cursor: pointer;
+            "
+          >
+            <option value="distance">折线绘制</option>
+            <option value="area">多边形绘制</option>
+          </select>
+        </div>
+        <button
+          id="measureNewBtn"
+          style="
+            width: 100%;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+          "
+        >
+          新绘制
+        </button>
+      </div>
 
       <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
 

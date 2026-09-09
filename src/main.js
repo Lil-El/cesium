@@ -7,7 +7,8 @@ import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import { initLayers, setLayerVisible, flyToLayer, setLayerKsbm, getCurrentKsbm } from "./layer.js";
 import { initSplit } from "./split.js";
-import model from "./model.js";
+import { initMeasure } from "./measure.js";
+import { DrawTool } from "./draw.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 Cesium.Ion.defaultAccessToken =
@@ -18,7 +19,26 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
     requestWaterMask: true,
     requestVertexNormals: true,
   }),
-  infoBox: false, // 关闭信息框
+  /**
+   *  name: "draw vertex",
+      description: `
+        <table class="cesium-infoBox-defaultTable">
+          <tr><td>经度</td><td>${longitude}</td></tr>
+          <tr><td>纬度</td><td>${latitude}</td></tr>
+          <tr><td>高度</td><td>${height} m</td></tr>
+        </table>
+      `,
+      properties: {
+        经度: longitude,
+        纬度: latitude,
+        高度: `${height} m`,
+        _noInfoBox: true
+      },
+
+  * 信息框: 设置 name/description/properties 时显示信息框
+  * properties 设置自定义 _noInfoBox 关闭信息框
+   */
+  infoBox: true,
   selectionIndicator: false, // 关闭选择指示器
   animation: false,
   timeline: false,
@@ -29,6 +49,13 @@ const viewer = new Cesium.Viewer("cesiumContainer", {
   navigationHelpButton: false,
   fullscreenButton: false,
   vrButton: false,
+});
+
+// 监听选择实体变化，关闭信息框
+viewer.selectedEntityChanged.addEventListener((entity) => {
+  if (entity && entity.properties?.getValue?.()?._noInfoBox) {
+    viewer.selectedEntity = undefined;
+  }
 });
 
 // 设置初始时间
@@ -51,17 +78,6 @@ await initTileset(viewer);
 viewer.scene.terrainProviderChanged.addEventListener(async (newProvider) => {
   // 加载自定义 glTF 建筑模型
   const h = await getTerrainHeightByLonLat(viewer, 108.87673452217288, 34.19290863238342);
-
-  viewer.scene.primitives.add(model);
-
-  model.readyEvent.addEventListener(() => {
-    const boundingSphere = model.boundingSphere;
-    const height = boundingSphere.radius * 2;
-
-    model.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(
-      Cesium.Cartesian3.fromDegrees(108.87673452217288, 34.19290863238342, h),
-    );
-  });
 });
 
 // 添加 OSM 建筑（由 osm.js 管理显隐）
@@ -83,6 +99,7 @@ function clearHighlight() {
 // 注册全局点击事件
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click) => {
+  if (DrawTool.isActive()) return;
   if (handleTreeLeftClick(click)) return;
 
   // 获取点击位置处的场景元素（Primitive或Entity）
@@ -108,6 +125,8 @@ handler.setInputAction((click) => {
       }
     });
     return;
+  } else {
+    fallbackPick(click, picked);
   }
 
   clearHighlight();
@@ -142,10 +161,14 @@ handler.setInputAction((click) => {
 
 // 鼠标移动时隐藏弹窗（点击空白处也隐藏）
 handler.setInputAction((movement) => {
+  if (DrawTool.isActive()) return;
   if (handleTreeMouseMove(movement)) return;
   clearHighlight();
   hidePopup();
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+// 初始化测量工具
+initMeasure(viewer);
 
 // 初始化树绘制模式
 initTreeMode(viewer, handler);

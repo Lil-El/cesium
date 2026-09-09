@@ -3,7 +3,7 @@ import * as Cesium from "cesium";
 const tilesetToggle = document.getElementById("tilesetToggle");
 const osmToggle = document.getElementById("osmToggle");
 
-let tilesetVisible = true;
+let tilesetVisible = false;
 let tileset = null;
 
 let osmVisible = false;
