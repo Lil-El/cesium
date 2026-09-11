@@ -7,8 +7,8 @@ import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import { initLayers, setLayerVisible, flyToLayer, setLayerKsbm, getCurrentKsbm } from "./layer.js";
 import { initSplit } from "./split.js";
-import { initEntityDraw } from "./entity-draw.js";
-import { DrawTool } from "./draw.js";
+import { initDraw } from "./graphics.js";
+import { AbilityEntity } from "./ability-entity.js";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 Cesium.Ion.defaultAccessToken =
@@ -58,6 +58,9 @@ viewer.selectedEntityChanged.addEventListener((entity) => {
   }
 });
 
+// 移除 Viewer 内部的默认双击focus行为（不走 trackedEntity）
+viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+
 // 设置初始时间
 const time = new Date("2026-08-21T12:00:00+10:00");
 viewer.clock.currentTime = Cesium.JulianDate.fromDate(time);
@@ -99,7 +102,7 @@ function clearHighlight() {
 // 注册全局点击事件
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click) => {
-  if (DrawTool.isActive()) return;
+  if (AbilityEntity.isDrawing()) return;
   if (handleTreeLeftClick(click)) return;
 
   // 获取点击位置处的场景元素（Primitive或Entity）
@@ -147,6 +150,8 @@ handler.setInputAction((click) => {
     } else if (picked?.id?.name === "Tree Polygon") {
       // 点击到了生态修复区域
       createTreeModel(viewer, cartesian);
+    } else if (picked?.id?.name === AbilityEntity.name) {
+      return void 0;
     } else {
       // 点击到了地形/地图
       const cartesian = viewer.scene.pickPosition(click.position);
@@ -161,14 +166,18 @@ handler.setInputAction((click) => {
 
 // 鼠标移动时隐藏弹窗（点击空白处也隐藏）
 handler.setInputAction((movement) => {
-  if (DrawTool.isActive()) return;
+  if (AbilityEntity.isDrawing()) return;
   if (handleTreeMouseMove(movement)) return;
   clearHighlight();
   hidePopup();
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-// 初始化实体绘制
-initEntityDraw(viewer);
+handler.setInputAction((movement) => {
+  if (AbilityEntity.isDrawing()) return;
+}, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+// 初始化实体绘制工具
+initDraw(viewer);
 
 // 初始化树绘制模式
 initTreeMode(viewer, handler);
