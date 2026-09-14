@@ -1,28 +1,35 @@
 import * as Cesium from "cesium";
 
 import { AbilityEntity } from "../ability-entity.js";
+import { Ability } from "./ability.js";
 
 export class AbilityContextMenu {
-  /** @type {Cesium.Viewer} */
+  /**
+   * @private
+   * @member {Cesium.Viewer}
+   **/
   static #viewer = null;
 
-  /** @type {AbilityEntity} */
-  static #drawnEntity = null;
-
-  /** @type {HTMLElement} */
+  /**
+   * @private
+   * @member {HTMLElement}
+   **/
   static #menuElement = null;
 
   /**
    * @param {Cesium.Viewer} viewer
-   * @param {Cesium.Entity} drawnEntity
+   * @param {AbilityEntity.AbilityMenuItem[]} abilities
    */
-  static build(viewer, drawnEntity) {
-    if (AbilityContextMenu.#drawnEntity === drawnEntity) return;
-
-    AbilityContextMenu.#drawnEntity = drawnEntity;
-    AbilityContextMenu.#viewer = viewer;
+  static build(viewer, abilities) {
+    if (!abilities || abilities.length === 0) return;
 
     const container = viewer.container;
+
+    if (AbilityContextMenu.#menuElement) {
+      container.removeChild(AbilityContextMenu.#menuElement);
+    }
+
+    AbilityContextMenu.#viewer = viewer;
 
     const menu = document.createElement("div");
     menu.className = "ability-context-menu";
@@ -42,7 +49,7 @@ export class AbilityContextMenu {
       user-select: none;
     `;
 
-    AbilityContextMenu.#renderMenuItems(menu, drawnEntity.properties.getValue().abilities);
+    AbilityContextMenu.#renderMenuItems(menu, abilities);
 
     AbilityContextMenu.#menuElement = menu;
     container.appendChild(menu);
@@ -56,7 +63,7 @@ export class AbilityContextMenu {
 
   /**
    * @param {HTMLElement} parent
-   * @param {object[]} items
+   * @param {AbilityEntity.AbilityMenuItem[]} items
    */
   static #renderMenuItems(parent, items) {
     for (const item of items) {
@@ -70,7 +77,7 @@ export class AbilityContextMenu {
         transition: background 0.15s;
       `;
 
-      menuItem.textContent = item.label;
+      menuItem.textContent = item.name;
 
       menuItem.addEventListener("mouseenter", () => {
         menuItem.style.background = "rgba(79, 195, 247, 0.25)";
@@ -101,10 +108,16 @@ export class AbilityContextMenu {
         menuItem.addEventListener("mouseleave", () => {
           submenu.style.display = "none";
         });
-      } else if (item.ability) {
+      } else {
         menuItem.addEventListener("click", (e) => {
           e.stopPropagation();
-          item.ability(AbilityContextMenu.#drawnEntity);
+
+          if (item.ability) {
+            item.ability.execute();
+          } else if (item instanceof Ability) {
+            item.execute();
+          }
+
           AbilityContextMenu.hideMenu();
         });
       }
@@ -114,7 +127,7 @@ export class AbilityContextMenu {
   }
 
   /**
-   * @param {object[]} children
+   * @param {AbilityEntity.AbilityMenuItem[]} children
    * @returns {HTMLElement}
    */
   static #createSubmenu(children) {
@@ -147,7 +160,7 @@ export class AbilityContextMenu {
         white-space: nowrap;
         transition: background 0.15s;
       `;
-      subItem.textContent = child.label;
+      subItem.textContent = child.name;
 
       subItem.addEventListener("mouseenter", () => {
         subItem.style.background = "rgba(79, 195, 247, 0.25)";
@@ -159,7 +172,7 @@ export class AbilityContextMenu {
       if (child.ability) {
         subItem.addEventListener("click", (e) => {
           e.stopPropagation();
-          child.ability(AbilityContextMenu.#drawnEntity);
+          child.ability.execute();
           AbilityContextMenu.hideMenu();
         });
       }

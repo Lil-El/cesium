@@ -17,35 +17,14 @@ const drawModeSelect = document.getElementById("drawModeSelect");
 const drawNewBtn = document.getElementById("drawNewBtn");
 const drawCancelBtn = document.getElementById("drawCancelBtn");
 
-const PolylineEntityAbilities = [
-  {
-    label: "编辑",
-    ability: EditAbility.edit,
-  },
-  {
-    label: "距离测量",
-    ability: MeasurementAbility.distance,
-  },
-];
+const PolylineEntityAbilities = [EditAbility/* , MeasurementAbility */];
 
 const PolygonEntityAbilities = [
-  {
-    label: "编辑",
-    ability: EditAbility.edit,
-  },
-  {
-    label: "测量",
-    children: [
-      {
-        label: "距离测量",
-        ability: MeasurementAbility.distance,
-      },
-      {
-        label: "面积测量",
-        ability: MeasurementAbility.area,
-      },
-    ],
-  },
+  EditAbility,
+  // {
+  //   name: "测量",
+  //   children: [MeasurementAbility, MeasurementAbility],
+  // },
 ];
 
 drawModeSelect.addEventListener("change", (e) => {
@@ -75,10 +54,9 @@ async function startDraw() {
 export function initDraw(viewer) {
   abilityEntity = new AbilityEntity({
     viewer,
-    color: Cesium.Color.AQUA.withAlpha(0.5),
     abilityMap: {
-      polyline: PolylineEntityAbilities,
-      polygon: PolygonEntityAbilities,
+      polyline: () => PolylineEntityAbilities,
+      polygon: () => PolygonEntityAbilities,
     },
   });
 }

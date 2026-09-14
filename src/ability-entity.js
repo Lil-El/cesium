@@ -1,5 +1,6 @@
 import * as Cesium from "cesium";
 import { AbilityContextMenu } from "./entity-abilities/ability-context-menu.js";
+import { Ability } from "./entity-abilities/ability.js";
 
 /**
  * @typedef AbilityEntity.Mode
@@ -17,71 +18,126 @@ import { AbilityContextMenu } from "./entity-abilities/ability-context-menu.js";
 
 /**
  * @class
- * @description 绘制并授权实体的能力类
+ * @classdesc 绘制并授权实体的能力类
  */
 export class AbilityEntity {
   static name = "Ability Entity";
 
-  /** @type {Cesium.Viewer} viewer */
+  /**
+   * @private
+   * @member {Cesium.Viewer} viewer
+   */
   #viewer = null;
 
-  /** @type {Object<AbilityEntity.Mode, AbilityEntity.Ability[]>} abilityMap */
+  /**
+   * @private
+   * @member {*} abilityMap
+   */
   #abilityMap = {};
 
-  /** @type {boolean} drawing */
+  /**
+   * @private
+   * @member {boolean} drawing
+   */
   #drawing = false;
 
-  /** @type {AbilityEntity.Mode} */
-  mode = "polyline";
+  /**
+   * @private
+   * @member {AbilityEntity.Mode}
+   */
+  #mode = "polyline";
 
-  /** @type {Cesium.Cartesian3[]} points */
-  points = [];
+  /**
+   * @private
+   * @member {Cesium.Cartesian3[]}
+   */
+  #points = [];
 
-  /** @type {Cesium.Entity} drawnEntity */
-  drawnEntity = null;
+  /**
+   * @private
+   * @member {Cesium.Entity} drawnEntity
+   */
+  #drawnEntity = null;
 
-  /** @type {Cesium.Entity} previewEntity */
+  /**
+   * @private
+   * @member {Cesium.Entity} previewEntity
+   */
   #previewEntity = null;
 
-  /** @type {Cesium.Entity[]} helperEntities */
+  /**
+   * @private
+   * @member {Cesium.Entity[]} helperEntities
+   */
   #helperEntities = [];
 
-  /** @type {Cesium.Color} color */
-  #color = 0;
+  /**
+   * @private
+   * @member {Cesium.Color} color
+   */
+  #color = Cesium.Color.AQUA;
 
-  /** @type {Promise<AbilityEntity.Result>} promise */
+  /**
+   * @private
+   * @member {Promise<AbilityEntity.Result>} promise
+   */
   #promise = null;
 
-  /** @type {function(result: AbilityEntity.Result)} void} resolve */
+  /**
+   * @private
+   * @member {function()} void} resolve
+   */
   #resolve = null;
 
-  /** @type {function(error: Error)} void} reject */
+  /**
+   * @private
+   * @member {function(error: Error)} void} reject
+   */
   #reject = null;
 
-  /** @type {number} lastClickTime */
+  /**
+   * @private
+   * @member {number} lastClickTime
+   */
   #lastClickTime = 0;
 
-  /** @type {Cesium.ScreenSpaceEventHandler} eventHandler */
+  /**
+   * @private
+   * @member {*}
+   */
+  #abilities = [];
+
+  /**
+   * @private
+   * @static
+   * @member {Cesium.ScreenSpaceEventHandler} eventHandler
+   */
   static #eventHandler = null;
 
-  /** @type {AbilityEntity} activeInstance */
+  /**
+   * @static
+   * @member {AbilityEntity} activeInstance
+   */
   static activeInstance = null;
 
-  /** @type {AbilityEntity[]} allInstances */
+  /**
+   * @static
+   * @member {AbilityEntity[]} allInstances
+   */
   static allInstances = [];
 
   /**
-   * 构造函数
-   * @param {Cesium.Viewer} viewer - Cesium Viewer 实例
-   * @param {Cesium.Color} color - 绘制颜色，默认红色
-   * @param {Object<AbilityEntity.Mode, AbilityEntity.Ability[]>} abilityMap - 能力映射表
+   * @constructor
+   *
+   * @param {Object} options - 配置选项
+   * @param {Cesium.Viewer} options.viewer - Cesium Viewer 实例
+   * @param {*} [options.abilityMap={}] - 能力映射表，key 为绘制模式，value 为返回能力数组的工厂函数
    */
-  constructor({ viewer, color = Cesium.Color.RED, abilityMap = {} }) {
+  constructor({ viewer, abilityMap = {} }) {
     this.#viewer = viewer;
-    this.#color = color;
     this.#abilityMap = abilityMap;
 
-    AbilityEntity.#setupHandler(viewer);
+    AbilityEntity.#setupHandlers(viewer);
 
     AbilityEntity.allInstances.forEach((i) => i.stop());
 
@@ -96,22 +152,28 @@ export class AbilityEntity {
     return this.#viewer;
   }
 
+  get mode() {
+    return this.#mode;
+  }
+
+  get points() {
+    return this.#points;
+  }
+
+  get drawnEntity() {
+    return this.#drawnEntity;
+  }
+
   isDrawing() {
     return this.#drawing;
   }
 
-  drawPolyline() {
-    this.mode = "polyline";
-    return this.#draw();
-  }
-
-  drawPolygon() {
-    this.mode = "polygon";
-    return this.#draw();
-  }
-
   clear() {
-    this.points = [];
+    // 释放所有能力实例
+    this.#dischargeAbilities(this.#abilities);
+    this.#abilities = [];
+
+    this.#points = [];
     this.#removeDrawn();
     this.#removePreview();
     this.#removeHelper();
@@ -144,11 +206,21 @@ export class AbilityEntity {
     return this.#promise;
   }
 
+  drawPolyline() {
+    this.#mode = "polyline";
+    return this.#draw();
+  }
+
+  drawPolygon() {
+    this.#mode = "polygon";
+    return this.#draw();
+  }
+
   /**
    * 设置事件处理函数
    * @param {Cesium.Viewer} viewer - Cesium Viewer 实例
    */
-  static #setupHandler(viewer) {
+  static #setupHandlers(viewer) {
     if (AbilityEntity.#eventHandler) return;
 
     AbilityEntity.#eventHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
@@ -171,20 +243,9 @@ export class AbilityEntity {
   }
 
   /**
-   * 移除绘制事件处理函数
-   */
-  static #teardownDrawHandler() {
-    if (AbilityEntity.#eventHandler) {
-      AbilityEntity.#eventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
-      AbilityEntity.#eventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
-      AbilityEntity.#eventHandler.removeInputAction(Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    }
-  }
-
-  /**
    * 移除事件处理函数
    */
-  static #teardownHandler() {
+  static #teardownHandlers() {
     if (AbilityEntity.#eventHandler) {
       AbilityEntity.#eventHandler.destroy();
       AbilityEntity.#eventHandler = null;
@@ -205,12 +266,12 @@ export class AbilityEntity {
 
     active.#lastClickTime = Date.now();
 
-    active.points.push(cartesian);
+    active.#points.push(cartesian);
 
-    if (active.points.length === 1) {
-      active.points.push(cartesian);
+    if (active.#points.length === 1) {
+      active.#points.push(cartesian);
 
-      if (active.mode === "polyline") {
+      if (active.#mode === "polyline") {
         active.#createPolylinePreview();
       } else {
         active.#createPolygonPreview();
@@ -228,13 +289,13 @@ export class AbilityEntity {
     if (!Cesium.defined(picked)) return void AbilityContextMenu.hideMenu();
 
     const drawnEntity = picked.id;
-    const activeInstance = drawnEntity?.properties?.getValue()?.["parent"];
+    const activeInstance = drawnEntity?.properties?.getValue()?.["_parent"];
 
     if (drawnEntity instanceof Cesium.Entity && activeInstance instanceof AbilityEntity) {
       AbilityEntity.activeInstance = activeInstance;
       if (activeInstance.isDrawing()) return false;
 
-      AbilityContextMenu.build(viewer, drawnEntity);
+      AbilityContextMenu.build(viewer, activeInstance.#abilities);
       AbilityContextMenu.showMenu(click.position);
     } else {
       AbilityContextMenu.hideMenu();
@@ -246,9 +307,11 @@ export class AbilityEntity {
 
     if (!active) return false;
     if (!active.isDrawing()) return false;
-    if (active.points.length === 0) return false;
+    if (active.#points.length === 0) return false;
 
-    if (active.mode === "polyline") {
+    active.#points.pop();
+
+    if (active.#mode === "polyline") {
       active.#finishPolyline();
     } else {
       active.#finishPolygon();
@@ -261,13 +324,13 @@ export class AbilityEntity {
     if (!active) return false;
     if (!active.isDrawing()) return false;
     if (!active.#viewer) return false;
-    if (active.points.length === 0) return false;
+    if (active.#points.length === 0) return false;
 
     const cartesian = active.#viewer.scene.pickPosition(movement.endPosition);
     if (!Cesium.defined(cartesian)) return false;
 
-    active.points.pop();
-    active.points.push(cartesian);
+    active.#points.pop();
+    active.#points.push(cartesian);
   }
 
   #removePreview() {
@@ -283,10 +346,21 @@ export class AbilityEntity {
   }
 
   #removeDrawn() {
-    if (this.drawnEntity) {
-      this.#viewer.entities.remove(this.drawnEntity);
-      this.drawnEntity = null;
+    if (this.#drawnEntity) {
+      this.#viewer.entities.remove(this.#drawnEntity);
+      this.#drawnEntity = null;
     }
+  }
+
+  #dischargeAbilities(abilities) {
+    abilities.forEach((item) => {
+      if (item instanceof Ability) {
+        item.destroy();
+        item = null;
+      } else {
+        this.#dischargeAbilities(item.children);
+      }
+    });
   }
 
   #finish() {
@@ -297,42 +371,43 @@ export class AbilityEntity {
       this.#viewer.scene.canvas.style.cursor = "default";
     }
 
-    this.#helperEntities.forEach((i) => (i.show = false));
+    this.#removeHelper();
 
-    this.drawnEntity = this.#previewEntity;
+    this.#drawnEntity = this.#previewEntity;
     this.#previewEntity = null;
 
-    const abilities = this.#abilityMap[this.mode] || [];
-    this.drawnEntity.properties.addProperty("abilities", abilities);
-    this.drawnEntity.properties.addProperty("parent", this);
+    this.#abilities = this.#injectAbility(this.#abilityMap?.[this.#mode]?.() || []);
+    this.#drawnEntity.properties.addProperty("_abilities", this.#abilities);
+    this.#drawnEntity.properties.addProperty("_parent", this);
+    AbilityEntity.rebuildDescription(this.#drawnEntity);
 
-    this.#resolve({ mode: this.mode, points: this.points, entity: this.drawnEntity });
+    this.#resolve();
   }
 
   #finishPolyline() {
-    if (this.points.length < 2) {
+    if (this.#points.length < 2) {
       this.#removePreview();
       this.#reject("至少需要两个点");
       return;
     }
 
-    this.#previewEntity.polyline.positions = [...this.points];
+    this.#previewEntity.polyline.positions = [...this.#points];
 
     this.#finish();
   }
 
   #finishPolygon() {
-    if (this.points.length < 3) {
+    if (this.#points.length < 3) {
       this.#removePreview();
       this.#reject("至少需要三个点");
       return;
     }
 
-    this.#previewEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(this.points);
+    this.#previewEntity.polygon.hierarchy = new Cesium.PolygonHierarchy(this.#points);
 
     const polylineHelper = this.#viewer.entities.getById("PolylineHelper");
     if (polylineHelper) {
-      polylineHelper.polyline.positions = [...this.points, this.points.at(0)];
+      polylineHelper.polyline.positions = [...this.#points, this.#points.at(0)];
     }
 
     this.#finish();
@@ -344,7 +419,7 @@ export class AbilityEntity {
        * CallbackPositionProperty 动态更新点的位置
        * https://sandcastle.cesium.com/index.html?id=callback-position-property
        */
-      position: this.points.at(-1),
+      position: this.#points.at(-1),
       point: {
         pixelSize: 6,
         color: Cesium.Color.WHITE,
@@ -355,12 +430,12 @@ export class AbilityEntity {
     });
     this.#helperEntities.push(point);
 
-    if (this.mode === "polyline" || this.#viewer.entities.getById("PolylineHelper")) return;
+    if (this.#mode === "polyline" || this.#viewer.entities.getById("PolylineHelper")) return;
 
     const polyline = this.#viewer.entities.add({
       id: "PolylineHelper",
       polyline: {
-        positions: new Cesium.CallbackProperty(() => [...this.points, this.points.at(0)], false),
+        positions: new Cesium.CallbackProperty(() => [...this.#points, this.#points.at(0)], false),
         width: 2,
         material: Cesium.Color.AQUA.withAlpha(0.8),
         clampToGround: true,
@@ -375,16 +450,13 @@ export class AbilityEntity {
     this.#previewEntity = this.#viewer.entities.add({
       id, // unique
       name: AbilityEntity.name, // not unique
-      description: `
-        <table class="cesium-infoBox-defaultTable">
-        <tr><td>id</td><td>${id}</td></tr>
-          <tr><td>name</td><td>${AbilityEntity.name}</td></tr>
-          <tr><td>mode</td><td>${this.mode}</td></tr>
-        </table>
-      `,
-      properties: {},
+      properties: {
+        id,
+        name: AbilityEntity.name,
+        mode: this.#mode,
+      },
       polyline: {
-        positions: new Cesium.CallbackProperty(() => this.points, false),
+        positions: new Cesium.CallbackProperty(() => this.#points, false),
         width: 2,
         material: this.#color.withAlpha(0.5),
         clampToGround: true,
@@ -398,22 +470,52 @@ export class AbilityEntity {
     this.#previewEntity = this.#viewer.entities.add({
       id, // unique
       name: AbilityEntity.name, // not unique
-      description: `
-        <table class="cesium-infoBox-defaultTable">
-          <tr><td>id</td><td>${id}</td></tr>
-          <tr><td>name</td><td>${AbilityEntity.name}</td></tr>
-          <tr><td>mode</td><td>${this.mode}</td></tr>
-        </table>
-      `,
-      properties: {},
+      properties: {
+        id,
+        name: AbilityEntity.name,
+        mode: this.#mode,
+      },
       polygon: {
-        hierarchy: new Cesium.CallbackProperty(() => new Cesium.PolygonHierarchy(this.points), false),
+        hierarchy: new Cesium.CallbackProperty(() => new Cesium.PolygonHierarchy(this.#points), false),
         material: this.#color.withAlpha(0.2),
         outline: true,
         outlineColor: this.#color.withAlpha(0.5),
         outlineWidth: 1,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       },
+    });
+  }
+
+  /**
+   * 重建实体的描述
+   * @param {Cesium.Entity} entity
+   */
+  static rebuildDescription(entity) {
+    let description = `<table class="cesium-infoBox-defaultTable">`;
+
+    const props = entity.properties?.getValue() || {};
+    for (const key in props) {
+      if (!key.startsWith("_")) {
+        const val = props[key];
+        description += `<tr><td>${key}</td><td>${val}</td></tr>`;
+      }
+    }
+    description += "</table>";
+
+    entity.description = description;
+  }
+
+  /**
+   * 注入能力
+   * @param {AbilityEntity.AbilityMenuItem[]} abilities
+   */
+  #injectAbility(abilities) {
+    return abilities.map((item) => {
+      if (item.prototype instanceof Ability) {
+        return new item(this);
+      } else {
+        return { ...item, children: this.#injectAbility(item.children) };
+      }
     });
   }
 }
