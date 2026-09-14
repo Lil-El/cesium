@@ -194,5 +194,3 @@ export class EditAbility extends Ability {
     return this.#helperEntities.indexOf(entity);
   }
 }
-
-// TODO: 取消绘制，重新绘制并编辑失效问题

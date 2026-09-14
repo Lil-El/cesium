@@ -5,6 +5,7 @@ import { MeasureDistanceAbility } from "./entity-abilities/measure-distance-abil
 import { MeasureAreaAbility } from "./entity-abilities/measure-area-ability.js";
 import { EditAbility } from "./entity-abilities/edit-ability.js";
 import { FloodAnalyzeAbility } from "./entity-abilities/flood-analyze-ability.js";
+import { RemoveAbility } from "./entity-abilities/remove-ability.js";
 
 /** @type {Cesium.Viewer} */
 let viewer = null;
@@ -19,7 +20,7 @@ const drawModeSelect = document.getElementById("drawModeSelect");
 const drawNewBtn = document.getElementById("drawNewBtn");
 const drawCancelBtn = document.getElementById("drawCancelBtn");
 
-const PolylineEntityAbilities = [EditAbility, MeasureDistanceAbility];
+const PolylineEntityAbilities = [EditAbility, MeasureDistanceAbility, RemoveAbility];
 
 const PolygonEntityAbilities = [
   EditAbility,
@@ -28,21 +29,22 @@ const PolygonEntityAbilities = [
     children: [MeasureDistanceAbility, MeasureAreaAbility],
   },
   FloodAnalyzeAbility,
+  RemoveAbility,
 ];
 
 drawModeSelect.addEventListener("change", (e) => {
   drawMode = e.target.value;
-  abilityEntity.stop();
+  abilityEntity.cancel();
   startDraw();
 });
 
 drawNewBtn.addEventListener("click", () => {
-  abilityEntity.stop();
+  abilityEntity.cancel();
   startDraw();
 });
 
 drawCancelBtn.addEventListener("click", () => {
-  abilityEntity.stop();
+  abilityEntity.cancel();
 });
 
 async function startDraw() {

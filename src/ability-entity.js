@@ -27,7 +27,7 @@ export class AbilityEntity {
    * @private
    * @member {Cesium.Viewer} viewer
    */
-  #viewer = null;
+  #viewer;
 
   /**
    * @private
@@ -57,13 +57,13 @@ export class AbilityEntity {
    * @private
    * @member {Cesium.Entity} drawnEntity
    */
-  #drawnEntity = null;
+  #drawnEntity;
 
   /**
    * @private
    * @member {Cesium.Entity} previewEntity
    */
-  #previewEntity = null;
+  #previewEntity;
 
   /**
    * @private
@@ -107,6 +107,8 @@ export class AbilityEntity {
    */
   #supervisor = null;
 
+  #listeners = {};
+
   /**
    * @private
    * @static
@@ -132,14 +134,30 @@ export class AbilityEntity {
    * @param {Object} options - 配置选项
    * @param {Cesium.Viewer} options.viewer - Cesium Viewer 实例
    * @param {*} [options.abilityMap={}] - 能力映射表，key 为绘制模式，value 为返回能力数组的工厂函数
+   * @param {Cesium.Entity} [options.entity=null] - 绘制的实体，用于授权能力
    */
-  constructor({ viewer, abilityMap = {} }) {
+  constructor({ viewer, abilityMap = {}, entity = null }) {
     this.#viewer = viewer;
     this.#rawAbilityMap = abilityMap;
 
+    if (entity && entity instanceof Cesium.Entity) {
+      if (!this.#viewer.entities.contains(entity)) this.#viewer.entities.add(entity);
+
+      this.#mode = !!entity.polyline ? "polyline" : "polygon";
+      this.#drawnEntity = entity;
+
+      if (this.#mode === "polygon") {
+        this.#points = entity.polygon.hierarchy.getValue().positions;
+      } else if (this.#mode === "polyline") {
+        this.#points = entity.polyline.positions.getValue().positions;
+      }
+
+      this.#impower();
+    }
+
     AbilityEntity.#setupHandlers(viewer);
 
-    AbilityEntity.allInstances.forEach((i) => i.stop());
+    AbilityEntity.allInstances.forEach((i) => i.cancel());
 
     AbilityEntity.allInstances.push(this);
   }
@@ -188,29 +206,37 @@ export class AbilityEntity {
     return this.#drawing;
   }
 
-  clear() {
-    this.#removeAbility();
-
-    this.#points = [];
-    this.#removeDrawn();
-    this.#removePreview();
-    this.#removeHelper();
-  }
-
-  stop() {
-    AbilityEntity.activeInstance = null;
-    this.#drawing = false;
-
+  cancel() {
     if (this.#viewer) {
       this.#viewer.scene.canvas.style.cursor = "default";
     }
 
-    this.clear();
+    AbilityEntity.activeInstance = null;
+    this.#drawing = false;
+
+    this.#removePreview();
+    this.#removeHelper();
+  }
+
+  destroy() {
+    if (this.#listeners.destroy) {
+      this.#listeners.destroy.forEach((callback) => callback(this));
+    }
+
+    this.cancel();
+
+    // 先移除能力
+    this.#removeAbility();
+
+    // 后移除绘制的实体
+    this.#points = [];
+    this.#removeDrawn();
+
+    // 移除所有监听器
+    this.#listeners = {};
   }
 
   #draw() {
-    this.stop();
-
     AbilityEntity.activeInstance = this;
     this.#drawing = true;
 
@@ -225,11 +251,15 @@ export class AbilityEntity {
   }
 
   drawPolyline() {
+    this.destroy();
+
     this.#mode = "polyline";
     return this.#draw();
   }
 
   drawPolygon() {
+    this.destroy();
+
     this.#mode = "polygon";
     return this.#draw();
   }
@@ -391,12 +421,22 @@ export class AbilityEntity {
     this.#drawnEntity = this.#previewEntity;
     this.#previewEntity = null;
 
-    this.#supervisor = new AbilitySupervisor(this);
-    this.#drawnEntity.properties.addProperty("_abilities", this.#supervisor.abilities);
-    this.#drawnEntity.properties.addProperty("_parent", this);
-    AbilityEntity.rebuildDescription(this.#drawnEntity);
+    this.#impower();
 
     this.#resolve();
+  }
+
+  #impower() {
+    if (!this.#drawnEntity) return;
+
+    this.#supervisor = new AbilitySupervisor(this);
+
+    if (!this.#drawnEntity.properties) this.#drawnEntity.properties = new Cesium.PropertyBag();
+
+    this.#drawnEntity.properties.addProperty("_abilities", this.#supervisor.abilities);
+    this.#drawnEntity.properties.addProperty("_parent", this);
+
+    AbilityEntity.rebuildDescription(this.#drawnEntity);
   }
 
   #finishPolyline() {
@@ -518,5 +558,21 @@ export class AbilityEntity {
     description += "</table>";
 
     entity.description = description;
+  }
+
+  on(event, callback) {
+    if (!["destroy"].includes(event)) return;
+
+    if (!this.#listeners[event]) this.#listeners[event] = [];
+
+    this.#listeners[event].push(callback);
+  }
+
+  un(event, callback) {
+    if (!["destroy"].includes(event)) return;
+
+    if (!this.#listeners[event]) return;
+
+    this.#listeners[event] = this.#listeners[event].filter((c) => c !== callback);
   }
 }
