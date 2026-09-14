@@ -281,18 +281,12 @@
         </button>
       </div>
 
-      <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
-
-      <label class="checkbox-label">
-        <input type="checkbox" id="floodToggle" />
-        <span>淹没分析</span>
-      </label>
-
-      <div id="sliderControls" style="display: none">
-        <label for="mySlider">水位高度</label>
+      <div id="floodAnalyzeSection" style="display: none">
+        <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 10px 0" />
+        <div style="font-size: 13px; color: #888; margin-bottom: 6px; font-weight: bold">淹没分析</div>
         <div class="slider-row">
-          <input type="range" id="mySlider" min="0" max="50" step="0.5" value="0" />
-          <span class="slider-value" id="sliderValue">0</span>
+          <input type="range" id="floodHeightSlider" min="0" max="50" step="0.5" value="0" />
+          <span class="slider-value" id="floodHeightValue">0m</span>
         </div>
       </div>
     </div>

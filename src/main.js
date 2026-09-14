@@ -1,8 +1,7 @@
 import * as Cesium from "cesium";
 import { getTerrainHeightByLonLat } from "./terrain.js";
 import { showMapPopup, showModelPopup, showOSMPopup, hidePopup, showLayerPopup } from "./popup.js";
-import { createFloodPolygon, flyToPolygon } from "./flood.js";
-import { initOSMBuildings, initTileset } from "./tiles.js";
+import { initOSMBuildings, initTileset, flyToTileset } from "./tiles.js";
 import { addHighlightFromGeometry } from "./geometry.js";
 import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import { initLayers, setLayerVisible, flyToLayer, setLayerKsbm, getCurrentKsbm } from "./layer.js";
@@ -212,13 +211,5 @@ document.getElementById("mineSelect").addEventListener("change", async (e) => {
 // 初始化卷帘对比
 initSplit(viewer);
 
-// 创建洪水多边形
-createFloodPolygon(viewer, [
-  [144.94352876928014, -37.81285165622311],
-  [144.9450432173468, -37.81508521790105],
-  [144.9477601314824, -37.81425124529352],
-  [144.94497871325956, -37.81215792998704],
-]);
-
-// 飞向洪水多边形
-flyToPolygon();
+// 飞行到瓦片集
+flyToTileset(viewer);

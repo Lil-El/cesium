@@ -1,13 +1,49 @@
 import * as Cesium from "cesium";
 import { AbilityEntity } from "../ability-entity.js";
+import { Ability } from "./ability.js";
 
-export class MeasurementAbility {
-  /**
-   * @param {AbilityEntity} abilityEntity
-   */
-  static distance(abilityEntity) {
-    const points = abilityEntity.points;
-    const viewer = abilityEntity.viewer;
+export class MeasurementAbility extends Ability {
+  #distance = "";
+
+  #area = "";
+
+  #helperEntities = [];
+
+  execute(type) {
+    super.execute();
+
+    const props = this.operated.drawnEntity.properties;
+    if (props.hasProperty(type)) props.removeProperty(type);
+
+    if (type === "distance") {
+      this.#helperEntities = this.distance();
+      props.addProperty(type, `${this.#distance}`);
+    } else if (type === "area") {
+      this.#helperEntities = this.area();
+      props.addProperty(type, `${this.#area}`);
+    }
+
+    AbilityEntity.rebuildDescription(this.operated.drawnEntity);
+  }
+
+  cancel() {
+    super.cancel();
+
+    this.#helperEntities.forEach((entity) => {
+      this.operated.viewer.entities.remove(entity);
+    });
+    this.#helperEntities = [];
+  }
+
+  distance() {
+    let points = [];
+    if (this.operated.mode === "polyline") {
+      points = this.operated.points;
+    } else if (this.operated.mode === "polygon") {
+      points = [...this.operated.points, this.operated.points[0]];
+    }
+
+    const viewer = this.operated.viewer;
 
     const labels = [];
     if (points.length < 2) {
@@ -15,21 +51,20 @@ export class MeasurementAbility {
     }
 
     for (let i = 1; i < points.length; i++) {
-      labels.push(MeasurementAbility.#addSegmentLabel(viewer, points[i - 1], points[i]));
+      labels.push(this.addSegmentLabel(viewer, points[i - 1], points[i]));
     }
 
-    const total = MeasurementAbility.#getTotalDistance(points);
-    labels.push(MeasurementAbility.#addTotalLabel(viewer, points[points.length - 1], total));
+    const total = this.getTotalDistance(points);
+    labels.push(this.addTotalLabel(viewer, points[points.length - 1], total));
+
+    this.#distance = this.formatDistance(total);
 
     return labels;
   }
 
-  /**
-   * @param {AbilityEntity} abilityEntity
-   */
-  static area(abilityEntity) {
-    const points = abilityEntity.points;
-    const viewer = abilityEntity.viewer;
+  area() {
+    const points = this.operated.points;
+    const viewer = this.operated.viewer;
 
     if (points.length < 3) {
       return [];
@@ -37,24 +72,20 @@ export class MeasurementAbility {
 
     const area = Math.abs(Cesium.PolygonPipeline.computeArea2D(points));
     const center = Cesium.BoundingSphere.fromPoints(points).center;
-    return [MeasurementAbility.#addAreaLabel(viewer, center, area)];
+
+    this.#area = this.formatArea(area);
+
+    return [this.addAreaLabel(viewer, center, area)];
   }
 
-  static #formatDistance(meters) {
-    if (meters >= 1000) {
-      return `${(meters / 1000).toFixed(2)} km`;
-    }
-    return `${meters.toFixed(2)} m`;
-  }
-
-  static #formatArea(squareMeters) {
+  formatArea(squareMeters) {
     if (squareMeters >= 1000000) {
       return `${(squareMeters / 1000000).toFixed(2)} km²`;
     }
     return `${squareMeters.toFixed(2)} m²`;
   }
 
-  static #getTotalDistance(points) {
+  getTotalDistance(points) {
     let total = 0;
     for (let i = 1; i < points.length; i++) {
       total += Cesium.Cartesian3.distance(points[i - 1], points[i]);
@@ -62,10 +93,10 @@ export class MeasurementAbility {
     return total;
   }
 
-  static #addSegmentLabel(viewer, start, end) {
+  addSegmentLabel(viewer, start, end) {
     const mid = Cesium.Cartesian3.midpoint(start, end, new Cesium.Cartesian3());
     const distance = Cesium.Cartesian3.distance(start, end);
-    const label = MeasurementAbility.#formatDistance(distance);
+    const label = this.formatDistance(distance);
 
     return viewer.entities.add({
       position: mid,
@@ -82,11 +113,11 @@ export class MeasurementAbility {
     });
   }
 
-  static #addTotalLabel(viewer, cartesian, totalDistance) {
+  addTotalLabel(viewer, cartesian, totalDistance) {
     return viewer.entities.add({
       position: cartesian,
       label: {
-        text: `总长: ${MeasurementAbility.#formatDistance(totalDistance)}`,
+        text: `总长: ${this.formatDistance(totalDistance)}`,
         font: "14px sans-serif",
         fillColor: Cesium.Color.YELLOW,
         outlineColor: Cesium.Color.BLACK,
@@ -98,11 +129,11 @@ export class MeasurementAbility {
     });
   }
 
-  static #addAreaLabel(viewer, cartesian, area) {
+  addAreaLabel(viewer, cartesian, area) {
     return viewer.entities.add({
       position: cartesian,
       label: {
-        text: `面积: ${MeasurementAbility.#formatArea(area)}`,
+        text: `面积: ${this.formatArea(area)}`,
         font: "14px sans-serif",
         fillColor: Cesium.Color.YELLOW,
         outlineColor: Cesium.Color.BLACK,
@@ -112,5 +143,19 @@ export class MeasurementAbility {
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       },
     });
+  }
+
+  formatDistance(meters) {
+    if (meters >= 1000) {
+      return `${(meters / 1000).toFixed(2)} km`;
+    }
+    return `${meters.toFixed(2)} m`;
+  }
+
+  formatArea(squareMeters) {
+    if (squareMeters >= 1000000) {
+      return `${(squareMeters / 1000000).toFixed(2)} km²`;
+    }
+    return `${squareMeters.toFixed(2)} m²`;
   }
 }

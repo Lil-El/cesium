@@ -4,7 +4,6 @@ import { AbilityEntity } from "../ability-entity.js";
 
 /**
  * @class
- * @abstract
  * @classdesc 能力类，用于表示实体的能力实例
  */
 export class Ability {
@@ -22,7 +21,7 @@ export class Ability {
    * @private
    * @member {AbilityEntity} operated
    **/
-  operated = null;
+  operated;
 
   /**
    * @constructor
@@ -34,22 +33,31 @@ export class Ability {
   }
 
   /**
-   * @override
-   * @description 执行能力实例，子类必须实现
+   * @description 执行能力实例
    */
-  execute() {}
+  execute() {
+    this.active = !this.active;
+    if (this.active) {
+      this.operated.supervisor.setCurrentAbility(this);
+    } else {
+      this.cancel();
+    }
+  }
 
   /**
-   * @override
-   * @description 取消能力实例，子类必须实现
+   * @description 取消能力实例
    */
-  cancel() {}
+  cancel() {
+    this.active = false;
+  }
 
   /**
-   * @override
-   * @description 销毁能力实例，子类必须实现
+   * @description 销毁能力实例
    */
-  destroy() {}
+  destroy() {
+    this.cancel();
+    this.operated = null;
+  }
 
   disableCamera() {
     this.operated.viewer.scene.screenSpaceCameraController.rotateEventTypes = [];

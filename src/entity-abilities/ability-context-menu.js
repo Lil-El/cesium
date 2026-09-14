@@ -169,13 +169,17 @@ export class AbilityContextMenu {
         subItem.style.background = "";
       });
 
-      if (child.ability) {
-        subItem.addEventListener("click", (e) => {
-          e.stopPropagation();
+      subItem.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        if (child.ability) {
           child.ability.execute();
-          AbilityContextMenu.hideMenu();
-        });
-      }
+        } else if (child instanceof Ability) {
+          child.execute();
+        }
+
+        AbilityContextMenu.hideMenu();
+      });
 
       submenu.appendChild(subItem);
     }

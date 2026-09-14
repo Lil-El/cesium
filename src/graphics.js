@@ -1,8 +1,10 @@
 import * as Cesium from "cesium";
 import { AbilityEntity } from "./ability-entity.js";
 
-import { MeasurementAbility } from "./entity-abilities/measurement-ability.js";
+import { MeasureDistanceAbility } from "./entity-abilities/measure-distance-ability.js";
+import { MeasureAreaAbility } from "./entity-abilities/measure-area-ability.js";
 import { EditAbility } from "./entity-abilities/edit-ability.js";
+import { FloodAnalyzeAbility } from "./entity-abilities/flood-analyze-ability.js";
 
 /** @type {Cesium.Viewer} */
 let viewer = null;
@@ -17,14 +19,15 @@ const drawModeSelect = document.getElementById("drawModeSelect");
 const drawNewBtn = document.getElementById("drawNewBtn");
 const drawCancelBtn = document.getElementById("drawCancelBtn");
 
-const PolylineEntityAbilities = [EditAbility/* , MeasurementAbility */];
+const PolylineEntityAbilities = [EditAbility, MeasureDistanceAbility];
 
 const PolygonEntityAbilities = [
   EditAbility,
-  // {
-  //   name: "测量",
-  //   children: [MeasurementAbility, MeasurementAbility],
-  // },
+  {
+    name: "测量",
+    children: [MeasureDistanceAbility, MeasureAreaAbility],
+  },
+  FloodAnalyzeAbility,
 ];
 
 drawModeSelect.addEventListener("change", (e) => {

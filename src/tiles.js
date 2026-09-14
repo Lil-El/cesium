@@ -58,3 +58,14 @@ export function set3DSplitMode(enabled) {
       : Cesium.SplitDirection.NONE;
   }
 }
+
+export function flyToTileset(viewer) {
+  viewer.flyTo(tileset, {
+    duration: 1,
+    offset: new Cesium.HeadingPitchRange(
+      Cesium.Math.toRadians(0),
+      Cesium.Math.toRadians(-90),
+      0
+    ),
+  });
+}

@@ -1,5 +1,5 @@
 import * as Cesium from "cesium";
-import { AbilityContextMenu } from "./entity-abilities/ability-context-menu.js";
+import { AbilitySupervisor } from "./entity-abilities/ability-supervisor.js";
 import { Ability } from "./entity-abilities/ability.js";
 
 /**
@@ -31,9 +31,9 @@ export class AbilityEntity {
 
   /**
    * @private
-   * @member {*} abilityMap
+   * @member {*} rawAbilityMap
    */
-  #abilityMap = {};
+  #rawAbilityMap = {};
 
   /**
    * @private
@@ -103,9 +103,9 @@ export class AbilityEntity {
 
   /**
    * @private
-   * @member {*}
+   * @member {AbilitySupervisor} supervisor
    */
-  #abilities = [];
+  #supervisor = null;
 
   /**
    * @private
@@ -135,7 +135,7 @@ export class AbilityEntity {
    */
   constructor({ viewer, abilityMap = {} }) {
     this.#viewer = viewer;
-    this.#abilityMap = abilityMap;
+    this.#rawAbilityMap = abilityMap;
 
     AbilityEntity.#setupHandlers(viewer);
 
@@ -148,6 +148,10 @@ export class AbilityEntity {
     return AbilityEntity.allInstances.some((i) => i.isDrawing());
   }
 
+  /**
+   * @member {Cesium.Viewer} viewer
+   * @returns {Cesium.Viewer} - Cesium Viewer 实例
+   */
   get viewer() {
     return this.#viewer;
   }
@@ -156,10 +160,26 @@ export class AbilityEntity {
     return this.#mode;
   }
 
+  /**
+   * @member {Cesium.Cartesian3[]}
+   * @returns {Cesium.Cartesian3[]} - 顶点坐标
+   */
   get points() {
     return this.#points;
   }
 
+  get supervisor() {
+    return this.#supervisor;
+  }
+
+  get rawAbilityMap() {
+    return this.#rawAbilityMap;
+  }
+
+  /**
+   * @member {Cesium.Entity} drawnEntity
+   * @returns {Cesium.Entity} - 绘制的实体
+   */
   get drawnEntity() {
     return this.#drawnEntity;
   }
@@ -169,9 +189,7 @@ export class AbilityEntity {
   }
 
   clear() {
-    // 释放所有能力实例
-    this.#dischargeAbilities(this.#abilities);
-    this.#abilities = [];
+    this.#removeAbility();
 
     this.#points = [];
     this.#removeDrawn();
@@ -286,19 +304,20 @@ export class AbilityEntity {
 
     const viewer = AbilityEntity.allInstances[0].viewer;
     const picked = viewer.scene.pick(click.position);
-    if (!Cesium.defined(picked)) return void AbilityContextMenu.hideMenu();
+    if (!Cesium.defined(picked)) return void 0;
 
     const drawnEntity = picked.id;
     const activeInstance = drawnEntity?.properties?.getValue()?.["_parent"];
+
+    if (!activeInstance) return false;
 
     if (drawnEntity instanceof Cesium.Entity && activeInstance instanceof AbilityEntity) {
       AbilityEntity.activeInstance = activeInstance;
       if (activeInstance.isDrawing()) return false;
 
-      AbilityContextMenu.build(viewer, activeInstance.#abilities);
-      AbilityContextMenu.showMenu(click.position);
+      activeInstance.supervisor.showContextMenu(click.position);
     } else {
-      AbilityContextMenu.hideMenu();
+      activeInstance.supervisor.hideContextMenu();
     }
   }
 
@@ -352,15 +371,11 @@ export class AbilityEntity {
     }
   }
 
-  #dischargeAbilities(abilities) {
-    abilities.forEach((item) => {
-      if (item instanceof Ability) {
-        item.destroy();
-        item = null;
-      } else {
-        this.#dischargeAbilities(item.children);
-      }
-    });
+  #removeAbility() {
+    if (this.#supervisor) {
+      this.#supervisor.destroy();
+      this.#supervisor = null;
+    }
   }
 
   #finish() {
@@ -376,8 +391,8 @@ export class AbilityEntity {
     this.#drawnEntity = this.#previewEntity;
     this.#previewEntity = null;
 
-    this.#abilities = this.#injectAbility(this.#abilityMap?.[this.#mode]?.() || []);
-    this.#drawnEntity.properties.addProperty("_abilities", this.#abilities);
+    this.#supervisor = new AbilitySupervisor(this);
+    this.#drawnEntity.properties.addProperty("_abilities", this.#supervisor.abilities);
     this.#drawnEntity.properties.addProperty("_parent", this);
     AbilityEntity.rebuildDescription(this.#drawnEntity);
 
@@ -503,19 +518,5 @@ export class AbilityEntity {
     description += "</table>";
 
     entity.description = description;
-  }
-
-  /**
-   * 注入能力
-   * @param {AbilityEntity.AbilityMenuItem[]} abilities
-   */
-  #injectAbility(abilities) {
-    return abilities.map((item) => {
-      if (item.prototype instanceof Ability) {
-        return new item(this);
-      } else {
-        return { ...item, children: this.#injectAbility(item.children) };
-      }
-    });
   }
 }
