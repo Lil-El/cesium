@@ -83,7 +83,6 @@ export class EditAbility extends Ability {
 
   /**
    * @override
-   * @implements {Ability#execute}
    */
   execute() {
     super.execute();
@@ -97,7 +96,6 @@ export class EditAbility extends Ability {
 
   /**
    * @override
-   * @implements {Ability#cancel}
    */
   cancel() {
     super.cancel();

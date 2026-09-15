@@ -6,6 +6,7 @@ import { MeasureAreaAbility } from "./entity-abilities/measure-area-ability.js";
 import { EditAbility } from "./entity-abilities/edit-ability.js";
 import { FloodAnalyzeAbility } from "./entity-abilities/flood-analyze-ability.js";
 import { RemoveAbility } from "./entity-abilities/remove-ability.js";
+import { PlantingAbility } from "./entity-abilities/planting-ability.js";
 
 /** @type {Cesium.Viewer} */
 let viewer = null;
@@ -29,6 +30,7 @@ const PolygonEntityAbilities = [
     children: [MeasureDistanceAbility, MeasureAreaAbility],
   },
   FloodAnalyzeAbility,
+  PlantingAbility,
   RemoveAbility,
 ];
 

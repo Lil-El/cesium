@@ -4,9 +4,9 @@ import * as Cesium from "cesium";
  * 需要在 terrainProvider 加载地形后调用，否则会报错
  * https://blog.csdn.net/gusushantang/article/details/158462588
  *
- * @param {*} viewer
- * @param {*} lon
- * @param {*} lat
+ * @param {Cesium.Viewer} viewer
+ * @param {number} lon - 经度
+ * @param {number} lat - 纬度
  * @returns
  */
 export async function getTerrainHeightByLonLat(viewer, lon, lat) {
@@ -18,13 +18,30 @@ export async function getTerrainHeightByLonLat(viewer, lon, lat) {
   return sampledPositions[0].height;
 }
 
+/**
+ * 获取指定位置的地形高度
+ *
+ * @param {Cesium.Viewer} viewer
+ * @param {Cesium.Cartesian3} cartesian
+ * @returns
+ */
 export async function getTerrainHeightByCartesian(viewer, cartesian) {
-  const terrainProvider = viewer.terrainProvider;
-  const sampledPositions = await Cesium.sampleTerrainMostDetailed(terrainProvider, [cartesian]);
+  const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
 
-  return sampledPositions[0].z;
+  const terrainProvider = viewer.terrainProvider;
+  const sampledPositions = await Cesium.sampleTerrainMostDetailed(terrainProvider, [cartographic]);
+
+  return sampledPositions[0].height;
 }
 
+/**
+ * 获取指定位置的地形高度
+ *
+ * @param {Cesium.Viewer} viewer - Cesium Viewer 实例
+ * @param {number} lon - 经度
+ * @param {number} lat - 纬度
+ * @returns
+ */
 export async function getHeightByLonLat(viewer, lon, lat) {
   const cartographic = Cesium.Cartographic.fromDegrees(lon, lat);
 
@@ -40,3 +57,4 @@ export async function getHeightByCartesian(viewer, cartesian) {
 
   return sampledPositions[0].height;
 }
+

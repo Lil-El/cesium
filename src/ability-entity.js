@@ -333,8 +333,12 @@ export class AbilityEntity {
     if (AbilityEntity.allInstances.length === 0) return false;
 
     const viewer = AbilityEntity.allInstances[0].viewer;
-    const picked = viewer.scene.pick(click.position);
-    if (!Cesium.defined(picked)) return void 0;
+    const drillPicked = viewer.scene.drillPick(click.position, 10, 10);
+
+    if (drillPicked.length === 0) return void 0;
+
+    const picked = drillPicked.find((i) => i.id instanceof Cesium.Entity);
+    if (!picked) return void 0;
 
     const drawnEntity = picked.id;
     const activeInstance = drawnEntity?.properties?.getValue()?.["_parent"];

@@ -1,11 +1,12 @@
 import * as Cesium from "cesium";
+import { getHeightByCartesian } from "./terrain.js";
 
 const tilesetToggle = document.getElementById("tilesetToggle");
 const osmToggle = document.getElementById("osmToggle");
 
 let viewer = null;
 
-let tilesetVisible = false;
+let tilesetVisible = true;
 let tileset = null;
 
 let osmVisible = false;
@@ -15,7 +16,9 @@ tilesetToggle.addEventListener("change", (e) => {
   tilesetVisible = e.target.checked;
   if (tileset) {
     tileset.show = tilesetVisible;
-    flyToTileset();
+    if (tilesetVisible) {
+      flyToTileset();
+    }
   }
 });
 
@@ -26,11 +29,39 @@ osmToggle.addEventListener("change", (e) => {
   }
 });
 
+/**
+ * // Adjust a tileset's height from the globe's surface.
+    const heightOffset = 20.0;
+    const boundingSphere = tileset.boundingSphere;
+    const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
+    const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
+    const offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, heightOffset);
+    const translation = Cesium.Cartesian3.subtract(offset, surface, new Cesium.Cartesian3());
+    tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+ */
+/**
+ *
+ * @param {Cesium.Viewer} _viewer
+ * @returns
+ */
 export async function initTileset(_viewer) {
   viewer = _viewer;
 
-  tileset = _viewer.scene.primitives.add(await Cesium.Cesium3DTileset.fromIonAssetId(69380));
+  const ts = await Cesium.Cesium3DTileset.fromIonAssetId(69380);
+
+  tileset = _viewer.scene.primitives.add(ts);
   tileset.show = tilesetVisible;
+
+  // show=true 时才能获取到正确的 terrain 高度
+  const boundingSphere = tileset.boundingSphere;
+  const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
+  const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
+  const terrainHeight = await getHeightByCartesian(_viewer, boundingSphere.center);
+  const offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, terrainHeight);
+  const translation = Cesium.Cartesian3.subtract(surface, offset, new Cesium.Cartesian3());
+  // 调整 tileset 高度，使它在贴合在地形上
+  tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+
   return tileset;
 }
 
