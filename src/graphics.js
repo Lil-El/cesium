@@ -7,6 +7,7 @@ import { EditAbility } from "./entity-abilities/edit-ability.js";
 import { FloodAnalyzeAbility } from "./entity-abilities/flood-analyze-ability.js";
 import { RemoveAbility } from "./entity-abilities/remove-ability.js";
 import { PlantingAbility } from "./entity-abilities/planting-ability.js";
+import { LineEffectAbility } from "./entity-abilities/line-effect-ability.js";
 
 /** @type {Cesium.Viewer} */
 let viewer = null;
@@ -21,7 +22,7 @@ const drawModeSelect = document.getElementById("drawModeSelect");
 const drawNewBtn = document.getElementById("drawNewBtn");
 const drawCancelBtn = document.getElementById("drawCancelBtn");
 
-const PolylineEntityAbilities = [EditAbility, MeasureDistanceAbility, RemoveAbility];
+const PolylineEntityAbilities = [EditAbility, MeasureDistanceAbility, LineEffectAbility, RemoveAbility];
 
 const PolygonEntityAbilities = [
   EditAbility,
