@@ -435,12 +435,10 @@ export class AbilityEntity {
 
     this.#supervisor = new AbilitySupervisor(this);
 
-    if (!this.#drawnEntity.properties) this.#drawnEntity.properties = new Cesium.PropertyBag();
-
-    this.#drawnEntity.properties.addProperty("_abilities", this.#supervisor.abilities);
-    this.#drawnEntity.properties.addProperty("_parent", this);
-
-    AbilityEntity.rebuildDescription(this.#drawnEntity);
+    AbilityEntity.updateEntityProperties(this.#drawnEntity, {
+      _abilities: this.#supervisor.abilities,
+      _parent: this,
+    });
   }
 
   #finishPolyline() {
@@ -543,6 +541,28 @@ export class AbilityEntity {
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
       },
     });
+  }
+
+  /**
+   * 更新实体属性
+   * @param {Cesium.Entity} entity - 实体
+   * @param {string | object} prop - 合并的属性 或 删除的属性
+   */
+  static updateEntityProperties(entity, prop) {
+    const props = entity.properties;
+
+    if (!entity.properties) entity.properties = new Cesium.PropertyBag();
+
+    if (typeof prop === "string") {
+      if (props.hasProperty(prop)) props.removeProperty(prop);
+    } else if (typeof prop === "object") {
+      for (const key in prop) {
+        if (props.hasProperty(key)) props.removeProperty(key);
+        props.addProperty(key, prop[key]);
+      }
+    }
+
+    AbilityEntity.rebuildDescription(entity);
   }
 
   /**

@@ -1,5 +1,5 @@
 import * as Cesium from "cesium";
-import { getHeightByCartesian } from "./terrain.js";
+import { getTerrainHeightByCartesian, getHeightByCartesian } from "./geographic.js";
 
 const tilesetToggle = document.getElementById("tilesetToggle");
 const osmToggle = document.getElementById("osmToggle");
@@ -56,11 +56,27 @@ export async function initTileset(_viewer) {
   const boundingSphere = tileset.boundingSphere;
   const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
   const surface = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, 0.0);
-  const terrainHeight = await getHeightByCartesian(_viewer, boundingSphere.center);
-  const offset = Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, terrainHeight);
+  const tilesetHeight = await getHeightByCartesian(_viewer, boundingSphere.center);
+  const terrainHeight = await getTerrainHeightByCartesian(_viewer, boundingSphere.center);
+  const offset = Cesium.Cartesian3.fromRadians(
+    cartographic.longitude,
+    cartographic.latitude,
+    tilesetHeight - terrainHeight,
+  );
   const translation = Cesium.Cartesian3.subtract(surface, offset, new Cesium.Cartesian3());
   // 调整 tileset 高度，使它在贴合在地形上
+  // 调整高度可以避免测量label的 高度参考系 为 CLAMP_TO_GROUND 时，label 被遮挡的问题
   tileset.modelMatrix = Cesium.Matrix4.fromTranslation(translation);
+
+  // 中心定位点
+  // viewer.entities.add({
+  //   position: boundingSphere.center,
+  //   name: "Tileset",
+  //   point: {
+  //     color: Cesium.Color.RED,
+  //     pixelSize: 10,
+  //   },
+  // });
 
   return tileset;
 }

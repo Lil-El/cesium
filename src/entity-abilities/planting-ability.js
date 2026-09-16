@@ -1,15 +1,24 @@
 import * as Cesium from "cesium";
+import * as turf from "@turf/turf";
 import { Ability } from "./ability.js";
-import { getHeightByCartesian, getTerrainHeightByCartesian } from "../geographic.js";
+import { AbilityEntity } from "../ability-entity.js";
+import {
+  cartesianToLonLat,
+  getHeightByCartesian,
+  getHeightByLonLat,
+  getTerrainHeightByCartesian,
+} from "../geographic.js";
 
 export class PlantingAbility extends Ability {
   name = "生态修复";
 
   #handler = null;
 
-  #manual = !true;
+  #manual = false;
 
   #helperEntities = [];
+
+  #helperPrimitives = new Cesium.PrimitiveCollection();
 
   #scale = 2.6; // 2.6 * 0.8 = 2.08 米
 
@@ -22,11 +31,11 @@ export class PlantingAbility extends Ability {
     super.execute();
 
     if (this.active) {
+      this.name = "取消 - 生态修复";
       if (this.#manual) {
-        this.name = "取消 - 生态修复";
         this.#setupHandlers(this.operated.viewer);
       } else {
-        this.#planting();
+        this.#planting(this.operated.points);
       }
     }
   }
@@ -45,6 +54,16 @@ export class PlantingAbility extends Ability {
       this.operated.viewer.entities.remove(entity);
     });
     this.#helperEntities = [];
+
+    this.operated.viewer.scene.primitives.remove(this.#helperPrimitives);
+    if (this.#helperPrimitives.isDestroyed()) {
+      console.log("helperPrimitives 已销毁");
+    } else {
+      this.#helperPrimitives.destroy();
+    }
+    this.#helperPrimitives = new Cesium.PrimitiveCollection();
+
+    AbilityEntity.updateEntityProperties(this.operated.drawnEntity, "tree");
   }
 
   /**
@@ -75,13 +94,17 @@ export class PlantingAbility extends Ability {
     this.#handler = null;
   }
 
-  #plantingByManual(click) {
+  async #plantingByManual(click) {
     const cartesian = this.operated.viewer.scene.pickPosition(click.position);
-    this.#createEntityTree(this.operated.viewer, cartesian);
-  }
+    const entity = await this.#createEntityTree(this.operated.viewer, cartesian);
 
-  #planting() {
+    this.operated.viewer.entities.add(entity);
 
+    this.#helperEntities.push(entity);
+
+    AbilityEntity.updateEntityProperties(this.operated.drawnEntity, {
+      tree: this.#helperEntities.length + " 棵树",
+    });
   }
 
   /**
@@ -91,60 +114,94 @@ export class PlantingAbility extends Ability {
    * @returns
    */
   async #createEntityTree(viewer, cartesian) {
-    const scale = this.#scale; // 1 => radius 0.8m
-
-    const h = scale / 2 + (await getHeightByCartesian(viewer, cartesian));
+    const h = (this.#radius * this.#scale) / 2 + (await getHeightByCartesian(viewer, cartesian));
 
     const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-    const lon = Cesium.Math.toDegrees(cartographic.longitude);
-    const lat = Cesium.Math.toDegrees(cartographic.latitude);
 
     /**
      * RELATIVE_TO_TERRAIN RELATIVE_TO_GROUND 相对高度 h = 8 / 2
      * CLAMP_TO_GROUND CLAMP_TO_GROUND 固定在地面，position.height 无效
      */
-    // 模型添加到 viewer.scene.primitives 中，可以获取到模型的 radius
-    const entity = viewer.entities.add({
-      position: Cesium.Cartesian3.fromDegrees(lon, lat, h),
+    const entity = new Cesium.Entity({
+      position: Cesium.Cartesian3.fromRadians(cartographic.longitude, cartographic.latitude, h),
       model: {
         uri: "/models/tree.glb",
-        scale,
+        scale: this.#scale,
         featureIdLabel: "🌳 一棵树",
       },
     });
 
-    this.#helperEntities.push(entity);
-
     return entity;
   }
 
-  // 是用 Primitive 创建树模型
-  async #createPrimitiveTree(viewer, cartesian) {
-    const scale = 8.0;
+  /**
+   * 用点网格创建树模型
+   * @param {Cesium.Cartesian3[]} points - polygon 的顶点坐标
+   */
+  async #planting(points) {
+    const viewer = this.operated.viewer;
 
+    const offset = (this.#radius * this.#scale) / 2;
+
+    const geoPoints = [...points, points[0]].map((p) => cartesianToLonLat(p));
+
+    const geoPolygon = turf.polygon([geoPoints]);
+
+    const bbox = turf.bbox(geoPolygon);
+
+    const featArr = turf.pointGrid(bbox, Math.ceil(this.#radius * this.#scale), { units: "meters" });
+
+    const coords = turf.coordAll(featArr);
+
+    // 弧度
+    const cartographics = coords.map(([lon, lat]) => Cesium.Cartographic.fromDegrees(lon, lat, 0));
+
+    // 弧度
+    const sampledPositions = await viewer.scene.sampleHeightMostDetailed(cartographics);
+
+    const matrixes = sampledPositions.map((cartographic, i) => {
+      const [lon, lat] = coords[i];
+      const transformed = Cesium.Cartesian3.fromDegrees(lon, lat, cartographic.height + offset);
+      return Cesium.Transforms.eastNorthUpToFixedFrame(transformed);
+    });
+
+    for (const modelMatrix of matrixes) {
+      const model = await this.#createPrimitiveTree(this.operated.viewer, modelMatrix);
+      this.#helperPrimitives.add(model);
+    }
+
+    // collection 可以当做 primitive 直接添加到 viewer.scene.primitives 中
+    viewer.scene.primitives.add(this.#helperPrimitives);
+
+    AbilityEntity.updateEntityProperties(this.operated.drawnEntity, {
+      tree: this.#helperPrimitives.length + " 棵树",
+    });
+  }
+
+  // 是用 Primitive 创建树模型
+  async #createPrimitiveTree(viewer, modelMatrix) {
+    // 第 1 棵：下载 + 解析 glTF（几百 ms）
+    // 第 2~N 棵：直接从缓存克隆（几 ms），只需设置不同的 modelMatrix
     const model = await Cesium.Model.fromGltfAsync({
       url: "/models/tree.glb",
-      modelMatrix: null,
-      scale,
+      modelMatrix,
+      scale: this.#scale,
       featureIdLabel: "🌳 一棵树",
     });
 
-    const h = await getHeightByCartesian(viewer, cartesian);
+    // model.readyEvent.addEventListener(() => {
+    //   console.log("ready");
+    //   const boundingSphere = model.boundingSphere;
+    //   const height = h + boundingSphere.radius / 2;
 
-    viewer.scene.primitives.add(model);
+    //   const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+    //   const lon = Cesium.Math.toDegrees(cartographic.longitude);
+    //   const lat = Cesium.Math.toDegrees(cartographic.latitude);
 
-    model.readyEvent.addEventListener(() => {
-      const boundingSphere = model.boundingSphere;
-      const height = boundingSphere.radius / 2 + h + 0.07 * scale;
+    //   const position = Cesium.Cartesian3.fromDegrees(lon, lat, height);
 
-      const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-      const lon = Cesium.Math.toDegrees(cartographic.longitude);
-      const lat = Cesium.Math.toDegrees(cartographic.latitude);
-
-      const position = Cesium.Cartesian3.fromDegrees(lon, lat, height);
-
-      model.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(position);
-    });
+    //   model.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(position);
+    // });
 
     return model;
   }

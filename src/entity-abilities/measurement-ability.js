@@ -12,18 +12,19 @@ export class MeasurementAbility extends Ability {
   execute(type) {
     super.execute();
 
-    const props = this.operated.drawnEntity.properties;
-    if (props.hasProperty(type)) props.removeProperty(type);
-
     if (type === "distance") {
       this.#helperEntities = this.distance();
-      props.addProperty(type, `${this.#distance}`);
+
+      AbilityEntity.updateEntityProperties(this.operated.drawnEntity, {
+        [type]: `${this.#distance}`,
+      });
     } else if (type === "area") {
       this.#helperEntities = this.area();
-      props.addProperty(type, `${this.#area}`);
-    }
 
-    AbilityEntity.rebuildDescription(this.operated.drawnEntity);
+      AbilityEntity.updateEntityProperties(this.operated.drawnEntity, {
+        [type]: `${this.#area}`,
+      });
+    }
   }
 
   cancel() {

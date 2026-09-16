@@ -1,9 +1,8 @@
 import * as Cesium from "cesium";
-import { getTerrainHeightByLonLat } from "./terrain.js";
+import { getTerrainHeightByLonLat } from "./geographic.js";
 import { showMapPopup, showModelPopup, showOSMPopup, hidePopup, showLayerPopup } from "./popup.js";
 import { initOSMBuildings, initTileset, flyToTileset } from "./tiles.js";
 import { addHighlightFromGeometry } from "./geometry.js";
-import { initTreeMode, handleTreeLeftClick, handleTreeMouseMove, createTreeModel } from "./tree.js";
 import { initLayers, setLayerVisible, flyToLayer, setLayerKsbm, getCurrentKsbm } from "./layer.js";
 import { initSplit } from "./split.js";
 import { initDraw } from "./graphics.js";
@@ -73,13 +72,16 @@ cameraController.tiltEventTypes = [Cesium.CameraEventType.RIGHT_DRAG];
 cameraController.rotateEventTypes = [Cesium.CameraEventType.LEFT_DRAG];
 cameraController.zoomEventTypes = [Cesium.CameraEventType.WHEEL];
 
-// 添加 3D Tiles 数据（由 tiles.js 管理显隐）
-await initTileset(viewer);
-
 // 监听地形 Provider 切换
 viewer.scene.terrainProviderChanged.addEventListener(async (newProvider) => {
   // 加载自定义 glTF 建筑模型
-  const h = await getTerrainHeightByLonLat(viewer, 108.87673452217288, 34.19290863238342);
+  // const h = await getTerrainHeightByLonLat(viewer, 108.87673452217288, 34.19290863238342);
+
+  // 添加 3D Tiles 数据（由 tiles.js 管理显隐）
+  await initTileset(viewer);
+
+  // 飞行到瓦片集
+  flyToTileset(viewer);
 });
 
 // 添加 OSM 建筑（由 osm.js 管理显隐）
@@ -102,7 +104,6 @@ function clearHighlight() {
 const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 handler.setInputAction((click) => {
   if (AbilityEntity.isDrawing()) return;
-  if (handleTreeLeftClick(click)) return;
 
   // 获取点击位置处的场景元素（Primitive或Entity）
   const picked = viewer.scene.pick(click.position);
@@ -146,9 +147,6 @@ handler.setInputAction((click) => {
     } else if (Cesium.defined(picked) && picked.primitive instanceof Cesium.Model) {
       // 点击到了模型
       showModelPopup(click.position, picked.primitive.featureIdLabel);
-    } else if (picked?.id?.name === "Tree Polygon") {
-      // 点击到了生态修复区域
-      createTreeModel(viewer, cartesian);
     } else if (picked?.id?.name === AbilityEntity.name) {
       return void 0;
     } else {
@@ -166,7 +164,7 @@ handler.setInputAction((click) => {
 // 鼠标移动时隐藏弹窗（点击空白处也隐藏）
 handler.setInputAction((movement) => {
   if (AbilityEntity.isDrawing()) return;
-  if (handleTreeMouseMove(movement)) return;
+
   clearHighlight();
   hidePopup();
 }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
@@ -177,9 +175,6 @@ handler.setInputAction((movement) => {
 
 // 初始化实体绘制工具
 initDraw(viewer);
-
-// 初始化树绘制模式
-initTreeMode(viewer, handler);
 
 // 初始化图层（默认同时展示）
 await initLayers(viewer);
@@ -210,6 +205,3 @@ document.getElementById("mineSelect").addEventListener("change", async (e) => {
 
 // 初始化卷帘对比
 initSplit(viewer);
-
-// 飞行到瓦片集
-flyToTileset(viewer);

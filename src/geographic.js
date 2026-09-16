@@ -58,3 +58,12 @@ export async function getHeightByCartesian(viewer, cartesian) {
   return sampledPositions[0].height;
 }
 
+/**
+ * 将笛卡尔坐标转换为 [lon, lat]
+ * @param {Cesium.Cartesian3} cartesian
+ * @returns {[number, number]}
+ */
+export function cartesianToLonLat(cartesian) {
+  const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+  return [Cesium.Math.toDegrees(cartographic.longitude), Cesium.Math.toDegrees(cartographic.latitude)];
+}
